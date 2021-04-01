@@ -65,7 +65,8 @@ enum class TreeOpts : std::uint32_t {
 	FollowSymLinks = 16,
 	FollowLazyLinks = 32,
 	HighPriority = 256,
-	DetachedWorkers = 512
+	DetachedWorkers = 512,
+	TrackWorkers = 1024
 };
 
 /// link's unique ID type

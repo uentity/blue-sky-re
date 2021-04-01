@@ -381,12 +381,12 @@ void py_bind_link(py::module& m) {
 			) {
 				return make_map_link(
 					mlevel, std::move(py_mf),
-					std::move(name), std::move(src), std::move(dst), update_on, opts, flags
+					std::move(name), std::move(src), std::move(dst), update_on,
+					opts | TreeOpts::TrackWorkers, flags
 				);
 			}),
 			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
-			"flags"_a = Flags::Plain
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
 		)
 		// normal ctor with tag
 		.def(py::init([](
@@ -395,12 +395,12 @@ void py_bind_link(py::module& m) {
 			) {
 				return make_map_link(
 					mlevel, std::move(py_mf),
-					tag, std::move(name), std::move(src), std::move(dst), update_on, opts, flags
+					tag, std::move(name), std::move(src), std::move(dst), update_on,
+					opts | TreeOpts::TrackWorkers, flags
 				);
 			}),
 			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
-			"flags"_a = Flags::Plain
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
 		)
 		// from mapper & existing map_link
 		.def(py::init([](
