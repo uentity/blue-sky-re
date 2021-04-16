@@ -24,15 +24,15 @@ public:
 	using engine_impl = map_impl_base;
 
 	/// link -> link mapping functions
-	using link_mapper_f = std::function<
-		caf::result<link>(link /* source */, link /* existing dest */, caf::event_based_actor* /* worker */)
-	>;
-	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */)>;
+	using link_mapper_f = std::function<caf::result<link>(
+		link /* source */, link /* existing dest */, event ev, caf::event_based_actor* /* worker */
+	)>;
+	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */, event ev)>;
 	/// node -> node mapping functions
-	using node_mapper_f = std::function<
-		caf::result<void>(node /* source */, node /* existing dest */, caf::event_based_actor* /* worker */)
-	>;
-	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */)>;
+	using node_mapper_f = std::function<caf::result<void>(
+		node /* source */, node /* existing dest */, event ev, caf::event_based_actor* /* worker */
+	)>;
+	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */, event ev)>;
 
 	using mapper_f = std::variant<link_mapper_f, simple_link_mapper_f, node_mapper_f, simple_node_mapper_f>;
 
@@ -40,13 +40,13 @@ public:
 	map_link(
 		mapper_f mf, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Normal | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
 	);
 	/// with custom tag
 	map_link(
 		mapper_f mf, uuid tag, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Normal | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
 	);
 	/// construct from existing copy of map_link but with another mapping
 	map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node = {});
@@ -67,7 +67,7 @@ public:
 BS_API auto make_otid_filter(
 	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node,
 	link_or_node dest_node = {}, Event update_on = Event::DataNodeModified,
-	TreeOpts opts = TreeOpts::Deep, Flags f = Flags::Plain
+	TreeOpts opts = TreeOpts::Deep | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
 ) -> map_link;
 
 NAMESPACE_END(blue_sky::tree)

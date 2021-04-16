@@ -22,14 +22,14 @@ using lmapper_res_t = std::pair< link /* mapping result */, link /* dest */ >;
 // modify worker actor behavior s.t. it invokes link mapper on `a_ack` message
 template<typename F>
 auto make_lmapper_actor(
-	map_link_impl::sp_map_link_impl mama, link src_link, F res_processor
+	map_link_impl::sp_map_link_impl mama, link src_link, event ev, F res_processor
 ) {
 	std::optional<lid_type> dest_lid;
 	if(auto pdest = mama->io_map_.find(src_link.id()); pdest != mama->io_map_.end())
 		dest_lid = pdest->second;
 
 	// make base actor behavior
-	return [=, mama = std::move(mama), mf = mama->mf_, rp = std::move(res_processor)]
+	return [=, mama = std::move(mama), mf = mama->mf_, ev = std::move(ev), rp = std::move(res_processor)]
 	(caf::event_based_actor* self) mutable {
 		// register as kernel citizen if required
 		if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
@@ -37,13 +37,13 @@ auto make_lmapper_actor(
 
 		self->become(
 			// invoke mapper & return resulting link (may be lazily evaluated)
-			[=, mf = std::move(mf)](a_apply, const link& dest_link) mutable {
+			[=, mf = std::move(mf), ev = std::move(ev)](a_apply, const link& dest_link) mutable {
 				adbg(self) << "lmapper: map " << to_string(src_link.id()) <<
 					" -> " << to_string(dest_link.id()) << std::endl;
 
 				auto res = std::optional<caf::result<link>>{};
 				if(src_link) {
-					if(error::eval_safe([&] { res = mf(src_link, dest_link, self); }))
+					if(error::eval_safe([&] { res = mf(src_link, dest_link, std::move(ev), self); }))
 						res = link{};
 				}
 				else
@@ -113,7 +113,7 @@ NAMESPACE_END()
 ///////////////////////////////////////////////////////////////////////////////
 //  update
 //
-auto map_link_impl::update(map_link_actor* papa, link src_link) -> void {
+auto map_link_impl::update(map_link_actor* papa, link src_link, event ev) -> void {
 	adbg(papa) << "lmapper::update " << to_string(src_link.id()) << " " << to_string(id_) << std::endl;
 	// sanity - don't map self
 	if(src_link.id() == id_) return;
@@ -152,7 +152,7 @@ auto map_link_impl::update(map_link_actor* papa, link src_link) -> void {
 	};
 
 	if(auto lmapper = spawn_lmapper_actor(
-		papa, src_link,
+		papa, src_link, std::move(ev),
 		[papa_actor = papa->actor(), s2 = std::move(s2_process_res)]
 		(lmapper_res_t res, caf::event_based_actor* worker) mutable {
 			auto tr = link_transaction{[s2 = std::move(s2), res = std::move(res)]() mutable {
@@ -202,7 +202,10 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 			};
 
 			// spawn mapper actor & start job
-			if(auto lmapper = spawn_lmapper_actor(papa, src_link, std::move(s2_process_res))) {
+			if(auto lmapper = spawn_lmapper_actor(
+				papa, src_link, event{caf::actor_cast<caf::actor>(papa), {}, Event::None},
+				std::move(s2_process_res)
+			)) {
 				rworker->send(lmapper, a_ack{});
 				mappers.push_back(std::move(lmapper));
 			}
@@ -300,7 +303,7 @@ auto map_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl>
 	return std::make_shared<map_link_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
-auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
+auto map_link_impl::erase(map_link_actor* self, lid_type src_lid, event) -> void {
 	if(auto pdest = io_map_.find(src_lid); pdest != io_map_.end()) {
 		self->send(out_.actor(), a_node_erase(), pdest->second);
 		io_map_.erase(pdest);

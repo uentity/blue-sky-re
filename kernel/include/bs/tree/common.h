@@ -16,6 +16,8 @@
 #include "errors.h"
 #include "inode.h"
 
+#include <caf/actor.hpp>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 // denote possible tree events
 enum class Event : std::uint32_t {
@@ -64,6 +66,7 @@ enum class TreeOpts : std::uint32_t {
 	Lazy = 8,
 	FollowSymLinks = 16,
 	FollowLazyLinks = 32,
+	MuteOutputNode = 64,
 	HighPriority = 256,
 	DetachedWorkers = 512,
 	TrackWorkers = 1024
@@ -87,6 +90,15 @@ using link_or_err = result_or_err<link>;
 using link_or_errbox = result_or_errbox<link>;
 using node_or_err = result_or_err<node>;
 using node_or_errbox = result_or_errbox<node>;
+
+struct event {
+	caf::actor origin;
+	prop::propdict params;
+	Event code;
+
+	auto origin_link() const -> link;
+	auto origin_node() const -> node;
+};
 
 NAMESPACE_END(blue_sky::tree)
 
