@@ -138,11 +138,12 @@ auto on_erase(const link& L, node_actor& self) {
 	// collect link IDs of all deleted subtree elements
 	// first elem is erased link itself
 	lids_v lids{ L.id() };
-	walk(L, [&lids](const link&, std::list<link> Ns, std::vector<link> Os) {
+	walk(L, [&lids](const link&, const std::list<link>& Ns, const links_v& Os) {
 		const auto dump_erased = [&](const link& erl) {
 			lids.push_back(erl.id());
 		};
-		std::for_each(Ns.cbegin(), Ns.cend(), dump_erased);
+		std::for_each(Ns.begin(), Ns.end(), dump_erased);
+		std::for_each(Os.begin(), Os.end(), dump_erased);
 	});
 
 	// send message that link erased
