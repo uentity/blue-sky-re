@@ -31,8 +31,8 @@ struct fmaster {
 	using registry_t = std::map<const objbase*, std::string_view>;
 	registry_t registry;
 
-	// sync access to storage above
-	std::mutex fmt_guard;
+	// sync access to data above
+	std::mutex fmt_guard, reg_guard;
 
 	fmaster() {}
 	fmaster(const fmaster& rhs) : fmt_storage(rhs.fmt_storage) {}
@@ -59,11 +59,11 @@ struct fmaster {
 		// deny removing fallback binary formatter
 		if(fmt_name == detail::bin_fmt_name) return false;
 
+		auto solo = std::lock_guard{ fmt_guard };
 		if(auto fmts = fmt_storage.find(obj_type_id); fmts != fmt_storage.end()) {
 			auto& fmt_set = fmts->second;
 			if(auto pfmt = fmt_set.find(fmt_name); pfmt != fmt_set.end()) {
 				// erase format
-				auto solo = std::lock_guard{ fmt_guard };
 				fmt_set.erase(pfmt);
 				return true;
 			}
@@ -72,12 +72,14 @@ struct fmaster {
 	}
 
 	auto formatter_installed(std::string_view obj_type_id, std::string_view fmt_name) -> bool {
+		auto solo = std::lock_guard{ fmt_guard };
 		if(auto fmts = fmt_storage.find(obj_type_id); fmts != fmt_storage.end())
 			return fmts->second.find(fmt_name) != fmts->second.end();
 		return false;
 	}
 
 	auto list_installed_formatters(std::string_view obj_type_id) -> std::vector<std::string> {
+		auto solo = std::lock_guard{ fmt_guard };
 		auto res = std::vector<std::string>{};
 		if(auto fmts = fmt_storage.find(obj_type_id); fmts != fmt_storage.end()) {
 			res.reserve(fmts->second.size());
@@ -88,6 +90,7 @@ struct fmaster {
 	}
 
 	auto get_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> object_formatter* {
+		auto solo = std::lock_guard{ fmt_guard };
 		if(auto fmts = fmt_storage.find(obj_type_id); fmts != fmt_storage.end()) {
 			auto& fmt_set = fmts->second;
 			if(auto pfmt = fmt_set.find(fmt_name); pfmt != fmt_set.end())
@@ -98,7 +101,7 @@ struct fmaster {
 
 	auto register_formatter(const objbase& obj, std::string_view fmt_name) -> bool {
 		if(auto frm = get_formatter(obj.bs_resolve_type().name, fmt_name)) {
-			auto solo = std::lock_guard{ fmt_guard };
+			auto solo = std::lock_guard{ reg_guard };
 			registry[&obj] = frm->name;
 			return true;
 		}
@@ -106,8 +109,8 @@ struct fmaster {
 	}
 
 	auto deregister_formatter(const objbase& obj) -> bool {
+		auto solo = std::lock_guard{ reg_guard };
 		if(auto r = registry.find(&obj); r != registry.end()) {
-			auto solo = std::lock_guard{ fmt_guard };
 			registry.erase(r);
 			return true;
 		}
@@ -115,6 +118,7 @@ struct fmaster {
 	}
 
 	auto get_obj_formatter(const objbase* obj) -> object_formatter* {
+		auto solo = std::lock_guard{ reg_guard };
 		if(auto r = registry.find(obj); r != registry.end())
 			return get_formatter(obj->bs_resolve_type().name, r->second);
 		return nullptr;
