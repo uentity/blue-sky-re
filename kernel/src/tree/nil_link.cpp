@@ -60,7 +60,7 @@ struct nil_link::self_actor : nil_engine_actor {
 			return ReqStatus::Void;
 		},
 
-		[](a_lnk_flags) { return Flags::Plain; },
+		[](a_lnk_flags) { return Flags::Nil; },
 		[](a_lnk_flags, Flags) {},
 
 		// all data is null
@@ -111,7 +111,7 @@ struct nil_link::self_impl : nil_engine_impl<nil_link, link_impl> {
 	auto data(unsafe_t) const -> sp_obj override { return nullptr; }
 
 	self_impl()
-		: super(defaults::tree::nil_link_name, Flags::Plain)
+		: super(defaults::tree::nil_link_name, Flags::Nil)
 	{
 		id_ = nil_uid;
 	}
