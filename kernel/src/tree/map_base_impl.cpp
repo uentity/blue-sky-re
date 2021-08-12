@@ -10,7 +10,7 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 
 map_impl_base::map_impl_base(bool is_link_mapper) :
-	in_(node::nil()), out_(node::nil()), tag_(), update_on_(Event::None), opts_(TreeOpts::Normal),
+	in_(node::nil()), out_(node::nil()), tag_(), update_on_(Event::None), opts_(TreeOpts::Nil),
 	is_link_mapper(is_link_mapper)
 {}
 

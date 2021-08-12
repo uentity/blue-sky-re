@@ -388,7 +388,7 @@ void py_bind_link(py::module& m) {
 			}),
 			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified,
-			"opts"_a = TreeOpts::Normal | TreeOpts::MuteOutputNode,
+			"opts"_a = TreeOpts::Nil,
 			"flags"_a = Flags::Plain
 		)
 		// normal ctor with tag
@@ -404,7 +404,7 @@ void py_bind_link(py::module& m) {
 			}),
 			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified,
-			"opts"_a = TreeOpts::Normal | TreeOpts::MuteOutputNode,
+			"opts"_a = TreeOpts::Nil,
 			"flags"_a = Flags::Plain
 		)
 		// from mapper & existing map_link
@@ -417,7 +417,7 @@ void py_bind_link(py::module& m) {
 				);
 			}),
 			"mlevel"_a, "mf"_a, "rhs"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"opts"_a = TreeOpts::Normal
+			"opts"_a = TreeOpts::Nil
 		)
 		// conversion ctor
 		.def(py::init<const link&>())

@@ -140,8 +140,7 @@ map_link_actor::map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_l
 	if(enumval(simpl.opts_ & TreeOpts::DetachedWorkers))
 		ropts_.data_node |= ReqOpts::Detached;
 	// start input node events tracker
-	if(enumval(simpl.update_on_))
-		reset_input_listener(simpl.update_on_, simpl.opts_);
+	reset_input_listener(simpl.update_on_, simpl.opts_);
 }
 
 auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> void {
@@ -150,19 +149,21 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 		const auto& simpl = mimpl();
 		adbg(this) << "starting listener on input node, is_nil = " << simpl.in_.is_nil() << std::endl;
 
-		if(!simpl.in_) return;
-		// [NOTE] spawn monitored actor <=> calling monitor(...) afterwards
-		inp_listener_ = spawn_in_group<caf::monitored>(
-			simpl.in_.home(), input_ack_retranslator,
-			caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), simpl.out_.actor(),
-			update_on, opts
-		);
+		if(simpl.in_ && enumval(simpl.update_on_))
+			// [NOTE] spawn monitored actor <=> calling monitor(...) afterwards
+			inp_listener_ = spawn_in_group<caf::monitored>(
+				simpl.in_.home(), input_ack_retranslator,
+				caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), simpl.out_.actor(),
+				update_on, opts
+			);
+		else
+			inp_listener_ = nullptr;
 	});
 
 	// if listener wasn't started fake it's death to trigger respawn
 	// otherwise kill & restart running one
 	if(!inp_listener_)
-		send(this, caf::down_msg{});
+		send<caf::message_priority::high>(this, caf::down_msg{});
 	else
 		send_exit(inp_listener_, caf::exit_reason::user_shutdown);
 }

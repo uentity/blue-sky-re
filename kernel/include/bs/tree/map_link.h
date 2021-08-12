@@ -40,19 +40,19 @@ public:
 	map_link(
 		mapper_f mf, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Normal | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Plain
 	);
 	/// with custom tag
 	map_link(
 		mapper_f mf, uuid tag, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Normal | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Plain
 	);
 	/// construct from existing copy of map_link but with another mapping
 	map_link(
 		mapper_f mf, const map_link& rhs,
 		link_or_node src_node, link_or_node dest_node = {},
-		TreeOpts opts = TreeOpts::Normal
+		TreeOpts opts = TreeOpts::Nil
 	);
 	/// convert from link
 	map_link(const link& rhs);
