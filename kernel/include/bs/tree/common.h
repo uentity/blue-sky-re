@@ -60,7 +60,7 @@ enum class InsertPolicy : std::uint8_t {
 
 /// options for algorithms working with tree
 enum class TreeOpts : std::uint32_t {
-	Normal = 0,
+	Nil = 0,
 	WalkUp = 2,
 	Deep = 4,
 	Lazy = 8,

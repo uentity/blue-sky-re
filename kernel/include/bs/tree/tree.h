@@ -42,7 +42,7 @@ BS_API auto find_root_handle(node N) -> link;
 BS_API auto convert_path(
 	std::string src_path, link start,
 	Key src_path_unit = Key::ID, Key dst_path_unit = Key::Name,
-	TreeOpts opts = TreeOpts::Normal
+	TreeOpts opts = TreeOpts::Nil
 ) -> std::string;
 
 /// quick link search by given absolute or relative path

@@ -41,7 +41,7 @@ template<
 	typename level_deref_f = decltype(gen_walk_down_tree())
 >
 auto deref_path_impl(
-	std::string_view path, link L, node root = node::nil(), TreeOpts opts = TreeOpts::Normal,
+	std::string_view path, link L, node root = node::nil(), TreeOpts opts = TreeOpts::Nil,
 	level_deref_f deref_f = gen_walk_down_tree()
 ) -> link {
 	using namespace allow_enumops;

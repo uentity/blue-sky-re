@@ -294,7 +294,7 @@ struct BS_HIDDEN_API context::impl {
 		};
 
 		// walk down tree
-		detail::deref_path_impl(path, root_lnk_, {}, TreeOpts::Normal, std::move(push_subpath));
+		detail::deref_path_impl(path, root_lnk_, {}, TreeOpts::Nil, std::move(push_subpath));
 		return nonexact_match || path == to_string(cur_subpath) ? res : none;
 	}
 

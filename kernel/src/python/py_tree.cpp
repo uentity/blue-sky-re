@@ -115,7 +115,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	bind_enum_with_ops<TreeOpts>(m, "TreeOpts")
-		.value("Normal"         , TreeOpts::Normal)
+		.value("Nil"            , TreeOpts::Nil)
 		.value("WalkUp"         , TreeOpts::WalkUp)
 		.value("Deep"           , TreeOpts::Deep)
 		.value("Lazy"           , TreeOpts::Lazy)
