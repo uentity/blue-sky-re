@@ -256,7 +256,7 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 		},
 
 		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
-			return refresh_once({this, {}, Event::None});
+			return refresh_once({this, {}, Event::Nil});
 		},
 
 		[=](a_ack, a_apply, const lid_type&, event ev) {

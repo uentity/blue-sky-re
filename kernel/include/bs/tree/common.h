@@ -21,7 +21,7 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 // denote possible tree events
 enum class Event : std::uint32_t {
-	None = 0,
+	Nil = 0,
 	LinkRenamed = 1,
 	LinkStatusChanged = 2,
 	LinkInserted = 4,
@@ -41,7 +41,7 @@ enum class ReqStatus { Void, Busy, OK, Error };
 
 /// flags reflect link properties and state
 enum Flags : std::uint8_t {
-	Plain = 0,
+	Nil = 0,
 	Persistent = 1,
 	Disabled = 2,
 	LazyLoad = 4

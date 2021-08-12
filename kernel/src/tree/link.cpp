@@ -139,7 +139,7 @@ auto link::info() const -> result_or_err<inode> {
 }
 
 auto link::flags() const -> Flags {
-	return pimpl()->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
+	return pimpl()->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Nil);
 }
 
 auto link::set_flags(Flags new_flags) const -> void {

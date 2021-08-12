@@ -88,7 +88,7 @@ void py_bind_tree(py::module& m) {
 
 	// bind arithmetic enums (with binary ops, etc)
 	bind_enum_with_ops<Flags>(m, "Flags")
-		.value("Plain", Flags::Plain)
+		.value("Nil", Flags::Nil)
 		.value("Persistent", Flags::Persistent)
 		.value("Disabled", Flags::Disabled)
 		.value("LazyLoad", Flags::LazyLoad)
@@ -96,7 +96,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	bind_enum_with_ops<Event>(m, "Event")
-		.value("None", Event::None)
+		.value("Nil", Event::Nil)
 		.value("LinkRenamed", Event::LinkRenamed)
 		.value("LinkStatusChanged", Event::LinkStatusChanged)
 		.value("LinkInserted", Event::LinkInserted)

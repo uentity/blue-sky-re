@@ -67,16 +67,16 @@ public:
 	// ctors
 	fusion_link(
 		std::string name, sp_obj data = nullptr,
-		sp_fusion bridge = nullptr, Flags f = Plain
+		sp_fusion bridge = nullptr, Flags f = Nil
 	);
 	fusion_link(
 		std::string name, node folder,
-		sp_fusion bridge = nullptr, Flags f = Plain
+		sp_fusion bridge = nullptr, Flags f = Nil
 	);
 
 	fusion_link(
 		std::string name, const char* obj_type, std::string oid = "",
-		sp_fusion bridge = nullptr, Flags f = Plain
+		sp_fusion bridge = nullptr, Flags f = Nil
 	);
 	/// convert from base link
 	fusion_link(const link& rhs);

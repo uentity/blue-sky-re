@@ -80,8 +80,8 @@ public:
 	explicit link(const bare_link& rhs);
 
 	/// makes hard link
-	link(std::string name, sp_obj data, Flags f = Plain);
-	link(std::string name, node folder, Flags f = Plain);
+	link(std::string name, sp_obj data, Flags f = Nil);
+	link(std::string name, node folder, Flags f = Nil);
 
 	/// [NOTE] move sematics is doable but disabled (by explicit copy ctor)
 	/// reason: moved from object MUST be immediately reset into nil link to not break invariants
@@ -269,9 +269,9 @@ public:
 	using super = link;
 
 	/// take an object that link will point to
-	hard_link(std::string name, sp_obj data, Flags f = Plain);
+	hard_link(std::string name, sp_obj data, Flags f = Nil);
 	/// construct `objnode` instance internally with passed folder
-	hard_link(std::string name, node folder, Flags f = Plain);
+	hard_link(std::string name, node folder, Flags f = Nil);
 	/// convert from base link
 	hard_link(const link& rhs);
 
@@ -294,7 +294,7 @@ public:
 	using super = link;
 
 	/// ctor -- additionaly accepts a pointer to object
-	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
+	weak_link(std::string name, const sp_obj& data, Flags f = Nil);
 	/// convert from base link
 	weak_link(const link& rhs);
 
@@ -317,9 +317,9 @@ public:
 	using super = link;
 
 	/// ctor -- pointee is specified by string path
-	sym_link(std::string name, std::string path, Flags f = Plain);
+	sym_link(std::string name, std::string path, Flags f = Nil);
 	/// ctor -- pointee is specified directly - absolute path will be stored
-	sym_link(std::string name, const link& src, Flags f = Plain);
+	sym_link(std::string name, const link& src, Flags f = Nil);
 	/// convert from base link
 	sym_link(const link& rhs);
 

@@ -40,13 +40,13 @@ public:
 	map_link(
 		mapper_f mf, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Nil
 	);
 	/// with custom tag
 	map_link(
 		mapper_f mf, uuid tag, std::string name, link_or_node src_node,
 		link_or_node dest_node = {}, Event update_on = Event::DataModified,
-		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Plain
+		TreeOpts opts = TreeOpts::Nil, Flags f = Flags::Nil
 	);
 	/// construct from existing copy of map_link but with another mapping
 	map_link(
@@ -73,7 +73,7 @@ public:
 BS_API auto make_otid_filter(
 	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node,
 	link_or_node dest_node = {}, Event update_on = Event::DataNodeModified,
-	TreeOpts opts = TreeOpts::Deep | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
+	TreeOpts opts = TreeOpts::Deep | TreeOpts::MuteOutputNode, Flags f = Flags::Nil
 ) -> map_link;
 
 NAMESPACE_END(blue_sky::tree)

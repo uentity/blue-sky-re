@@ -169,8 +169,8 @@ void py_bind_link(py::module& m) {
 	auto link_pyface = py::class_<link, engine>(m, "link")
 		.def(py::init(), "Construct nil link")
 		.def(py::init<const bare_link&>())
-		.def(py::init<std::string, sp_obj, Flags>(), "name"_a, "data"_a, "f"_a = Plain)
-		.def(py::init<std::string, node, Flags>(), "name"_a, "folder"_a, "f"_a = Plain)
+		.def(py::init<std::string, sp_obj, Flags>(), "name"_a, "data"_a, "f"_a = Nil)
+		.def(py::init<std::string, node, Flags>(), "name"_a, "folder"_a, "f"_a = Nil)
 
 		.def("bare", &link::bare, "Convert to bare (unsafe) link")
 
@@ -289,23 +289,23 @@ void py_bind_link(py::module& m) {
 	//
 	py::class_<hard_link, link>(m, "hard_link")
 		.def(py::init<std::string, sp_obj, Flags>(),
-			"name"_a, "data"_a, "flags"_a = Flags::Plain)
+			"name"_a, "data"_a, "flags"_a = Flags::Nil)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return hard_link::type_id_(); })
 	;
 
 	py::class_<weak_link, link>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, Flags>(),
-			"name"_a, "data"_a, "flags"_a = Flags::Plain)
+			"name"_a, "data"_a, "flags"_a = Flags::Nil)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return weak_link::type_id_(); })
 	;
 
 	py::class_<sym_link, link>(m, "sym_link")
 		.def(py::init<std::string, std::string, Flags>(),
-			"name"_a, "path"_a, "flags"_a = Flags::Plain)
+			"name"_a, "path"_a, "flags"_a = Flags::Nil)
 		.def(py::init<std::string, const link&, Flags>(),
-			"name"_a, "source"_a, "flags"_a = Flags::Plain)
+			"name"_a, "source"_a, "flags"_a = Flags::Nil)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return sym_link::type_id_(); })
 
@@ -319,9 +319,9 @@ void py_bind_link(py::module& m) {
 	//
 	py::class_<fusion_link, link>(m, "fusion_link")
 		.def(py::init<std::string, sp_obj, sp_fusion, Flags>(),
-			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
+			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Nil)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
-			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
+			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Nil)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return fusion_link::type_id_(); })
 
@@ -389,7 +389,7 @@ void py_bind_link(py::module& m) {
 			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified,
 			"opts"_a = TreeOpts::Nil,
-			"flags"_a = Flags::Plain
+			"flags"_a = Flags::Nil
 		)
 		// normal ctor with tag
 		.def(py::init([](
@@ -405,7 +405,7 @@ void py_bind_link(py::module& m) {
 			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified,
 			"opts"_a = TreeOpts::Nil,
-			"flags"_a = Flags::Plain
+			"flags"_a = Flags::Nil
 		)
 		// from mapper & existing map_link
 		.def(py::init([](
@@ -436,7 +436,7 @@ void py_bind_link(py::module& m) {
 	m.def(
 		"make_otid_filter", &make_otid_filter, "allowed_otids"_a, "name"_a, "src_node"_a,
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
-		"opts"_a = TreeOpts::Deep | TreeOpts::MuteOutputNode, "flags"_a = Flags::Plain
+		"opts"_a = TreeOpts::Deep | TreeOpts::MuteOutputNode, "flags"_a = Flags::Nil
 	);
 
 	///////////////////////////////////////////////////////////////////////////////
