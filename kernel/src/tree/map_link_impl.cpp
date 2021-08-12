@@ -172,7 +172,7 @@ auto map_link_impl::update(map_link_actor* papa, link src_link, event ev) -> voi
 ///////////////////////////////////////////////////////////////////////////////
 //  refresh
 //
-auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworker)
+auto map_link_impl::refresh(map_link_actor* papa, const event& ev, caf::event_based_actor* rworker)
 -> caf::result<node_or_errbox> {
 	using namespace allow_enumops;
 	adbg(papa) << "impl::refresh" << std::endl;
@@ -200,10 +200,7 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 			};
 
 			// spawn mapper actor & start job
-			if(auto lmapper = spawn_lmapper_actor(
-				papa, src_link, event{caf::actor_cast<caf::actor>(papa), {}, Event::None},
-				std::move(s2_process_res)
-			)) {
+			if(auto lmapper = spawn_lmapper_actor(papa, src_link, ev, std::move(s2_process_res))) {
 				rworker->send(lmapper, a_ack{});
 				mappers.push_back(std::move(lmapper));
 			}
@@ -280,13 +277,13 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 	return res;
 }
 
-auto map_link_impl::refresh(map_link_actor* papa) -> caf::result<node_or_errbox> {
+auto map_link_impl::refresh(map_link_actor* papa, event ev) -> caf::result<node_or_errbox> {
 	// run output node refresh in separate actor
 	return request_data_impl<node>(
-		*papa, Req::DataNode, ReqOpts::Detached,
-		[=, pimpl = std::static_pointer_cast<map_link_impl>(papa->pimpl_)]
+		*papa, Req::DataNode, enumval(opts_ & TreeOpts::DetachedWorkers) ? ReqOpts::Detached : ReqOpts::WaitIfBusy,
+		[=, ev = std::move(ev), pimpl = std::static_pointer_cast<map_link_impl>(papa->pimpl_)]
 		(caf::event_based_actor* rworker) {
-			return pimpl->refresh(papa, rworker);
+			return pimpl->refresh(papa, ev, rworker);
 		}
 	);
 }
