@@ -29,7 +29,7 @@ auto make_lmapper_actor(
 		dest_lid = pdest->second;
 
 	// make base actor behavior
-	return [=, mama = std::move(mama), mf = mama->mf_, ev = std::move(ev), rp = std::move(res_processor)]
+	return [=, mf = mama->mf_, ev = std::move(ev), rp = std::move(res_processor)]
 	(caf::event_based_actor* self) mutable {
 		// register as kernel citizen if required
 		if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
@@ -93,6 +93,7 @@ auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
 	auto mama = papa->spimpl<map_link_impl>();
 	auto res = caf::actor{};
 
+	const bool do_track_worker = enumval(mama->opts_ & TreeOpts::TrackWorkers);
 	if(enumval(mama->opts_ & TreeOpts::DetachedWorkers))
 		res = papa->spawn<caf::detached>(
 			make_lmapper_actor(std::move(mama), std::forward<Args>(args)...)
@@ -103,7 +104,7 @@ auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
 		);
 
 	// early register as kernel citizen if required
-	if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
+	if(do_track_worker)
 		KRADIO.register_citizen(res.address());
 	return res;
 }

@@ -65,6 +65,8 @@ public:
 
 	auto l_target() const -> const link_mapper_f*;
 	auto n_target() const -> const node_mapper_f*;
+
+	auto reset_settings(Event update_on, TreeOpts opts) -> void;
 };
 
 /// returns map_link that filters objects from input node by object type ID(s)
