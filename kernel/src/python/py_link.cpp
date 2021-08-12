@@ -427,6 +427,10 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("tag", &map_link::tag)
 		.def_property_readonly("input", &map_link::input)
 		.def_property_readonly("output", &map_link::output)
+
+		.def(
+			"reset_settings", &map_link::reset_settings, "update_on"_a, "opts"_a,
+			"Change settings of running map_link - async, will cause respawn of event listener actor")
 	;
 
 	m.def(

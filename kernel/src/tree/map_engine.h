@@ -37,7 +37,9 @@ public:
 		// invoke mapper on given link from given origin node (sent by retranslator)
 		caf::reacts_to<a_ack, a_apply, lid_type /* src */, event>,
 		// link erased from input (sub)node
-		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>
+		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>,
+		// reinstall options
+		caf::reacts_to<a_apply, Event, TreeOpts>
 	>;
 	// complete behavior
 	using actor_type = super::actor_type::extend_with<map_actor_type>;
