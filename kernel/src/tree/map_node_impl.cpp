@@ -82,8 +82,8 @@ auto map_node_impl::update(map_link_actor* papa, link, event ev) -> void {
 	spawn_mapper_job<true>(this, papa, std::move(ev));
 }
 
-auto map_node_impl::refresh(map_link_actor* papa) -> caf::result<node_or_errbox> {
-	return spawn_mapper_job(this, papa, event{caf::actor_cast<caf::actor>(papa), {}, Event::None});
+auto map_node_impl::refresh(map_link_actor* papa, event ev) -> caf::result<node_or_errbox> {
+	return spawn_mapper_job(this, papa, std::move(ev));
 }
 
 // [NOTE] both link -> link & node -> node impls have same type ID,

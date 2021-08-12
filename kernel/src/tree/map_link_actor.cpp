@@ -122,10 +122,10 @@ auto input_ack_retranslator(
 			) { send_parent(Event::LinkRenamed, lid, std::move(N)); },
 			// leaf status
 			[=](a_ack, caf::actor N, const lid_type& lid, a_lnk_status, Req, ReqStatus, ReqStatus)
-			{ send_parent(Event::LinkRenamed, lid, std::move(N)); },
+			{ send_parent(Event::LinkStatusChanged, lid, std::move(N)); },
 			// leaf data altered by transaction
 			[=](a_ack, caf::actor N, const lid_type& lid, a_data, const tr_result::box&)
-			{ send_parent(Event::LinkRenamed, lid, std::move(N)); }
+			{ send_parent(Event::DataModified, lid, std::move(N)); }
 		});
 	else
 		return res;
@@ -226,12 +226,12 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 }
 
 auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
-	auto refresh_once = [this, casual_bhv = make_casual_behavior().unbox()]() {
+	auto refresh_once = [this, casual_bhv = make_casual_behavior().unbox()](event ev) {
 		adbg(this) << "<- a_data_node (refresh)" << std::endl;
 		// install casual behavior
 		become(casual_bhv);
 		// invoke refresh
-		return mimpl().refresh(this);
+		return mimpl().refresh(this, std::move(ev));
 	};
 
 	// invoke refresh once on DataNode request
@@ -243,17 +243,17 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 		},
 
 		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
-			return refresh_once();
+			return refresh_once({this, {}, Event::None});
 		},
 
-		[=](a_ack, a_apply, const lid_type&, const event&) {
+		[=](a_ack, a_apply, const lid_type&, event ev) {
 			adbg(this) << "<- update (refresh)" << std::endl;
-			refresh_once();
+			refresh_once(std::move(ev));
 		},
 
-		[=](a_ack, a_node_erase, const lid_type&, const event&) {
+		[=](a_ack, a_node_erase, const lid_type&, event ev) {
 			adbg(this) << "<- erase (refresh)" << std::endl;
-			refresh_once();
+			refresh_once(std::move(ev));
 		}
 
 	};

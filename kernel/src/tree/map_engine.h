@@ -72,7 +72,7 @@ public:
 	virtual auto update(map_link_actor* papa, link src_link, event ev) -> void = 0;
 	virtual auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void = 0;
 	// reset all mappings from scratch, started in separate `worker` actor
-	virtual auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> = 0;
+	virtual auto refresh(map_link_actor* papa, event ev) -> caf::result<node_or_errbox> = 0;
 
 	// data members
 	node in_, out_;
@@ -103,9 +103,9 @@ public:
 	auto update(map_link_actor* papa, link src_link, event ev) -> void override final;
 	auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void override final;
 	// reset all mappings from scratch, started in separate `worker` actor
-	auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> override final;
+	auto refresh(map_link_actor* papa, event ev) -> caf::result<node_or_errbox> override final;
 	// refresh impl inside worker actor
-	auto refresh(map_link_actor* papa, caf::event_based_actor* rworker)
+	auto refresh(map_link_actor* papa, const event& ev, caf::event_based_actor* rworker)
 	-> caf::result<node_or_errbox>;
 
 	link_mapper_f mf_;
@@ -136,7 +136,7 @@ public:
 	// implementation is identical in all cases - just spawn mapper job
 	auto update(map_link_actor* papa, link src_link, event ev) -> void override final;
 	auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void override final;
-	auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> override final;
+	auto refresh(map_link_actor* papa, event ev) -> caf::result<node_or_errbox> override final;
 
 	node_mapper_f mf_;
 
