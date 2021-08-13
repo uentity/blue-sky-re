@@ -18,7 +18,6 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
 
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>
@@ -138,7 +137,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		SCOPE_EVAL_SAFE
 			// [NOTE] assume objects dir is stored in generic format
 			abs_obj_path = fs::absolute(
-				objects_path_ / prehash_stem(std::string(obj.home_id()) + '.' + obj_frm)
+				objects_path_ / prehash_stem(obj.home_id() + '.' + obj_frm)
 			);
 		RETURN_SCOPE_ERR
 

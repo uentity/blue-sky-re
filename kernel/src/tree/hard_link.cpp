@@ -12,10 +12,6 @@
 #include <bs/tree/errors.h>
 #include <bs/kernel/types_factory.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-
 #include "hard_link.h"
 #include "../serialize/tree_impl.h"
 
@@ -90,17 +86,6 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 				monitor_object();
 			// retranslate ack to upper level
 			ack_up(a_lnk_status(), req, new_rs, prev_rs);
-		},
-
-		[=](a_home, const std::string& new_hid) {
-			// object's home changed - leave old home
-			if(!obj_hid_.empty())
-				leave(system().groups().get_local(std::string(obj_hid_)));
-			// enter new one
-			if(auto new_home = system().groups().get_local(new_hid)) {
-				join(new_home);
-				obj_hid_ = new_home.get()->identifier();
-			}
 		},
 
 		// object altered ack

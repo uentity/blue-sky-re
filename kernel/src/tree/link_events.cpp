@@ -13,8 +13,6 @@
 
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using event_handler = link::event_handler;

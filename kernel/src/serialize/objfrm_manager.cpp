@@ -12,11 +12,9 @@
 #include <bs/actor_common.h>
 #include <bs/objbase.h>
 #include <bs/tree/errors.h>
-#include <bs/serialize/cafbind.h>
 
 #include "../objbase_actor.h"
 
-#include <cereal/types/vector.hpp>
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -81,7 +79,7 @@ return {
 
 auto objfrm_manager::wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error> {
 	auto fmanager = caf::make_function_view(
-		self, how_long == infinite ? caf::infinite : caf::duration{how_long}
+		self, how_long == infinite ? caf::infinite : how_long
 	);
 
 	auto res = std::vector<error>{};

@@ -81,6 +81,7 @@ BS_API auto to_string(const lids_v& path, bool as_absolute = true) -> std::strin
 class link;
 class link_impl;
 class link_actor;
+using links_v = std::vector<link>;
 
 class node;
 class node_impl;
@@ -93,7 +94,7 @@ using link_or_errbox = result_or_errbox<link>;
 using node_or_err = result_or_err<node>;
 using node_or_errbox = result_or_errbox<node>;
 
-struct event {
+struct BS_API event {
 	caf::actor origin;
 	prop::propdict params;
 	Event code;
