@@ -73,8 +73,8 @@ private:
 
 		template<typename F>
 		static auto make() {
-			return type{[](erased_ctor& ec, auto&&... args) {
-				return (reinterpret_cast<F&>(ec))(std::forward<decltype(args)>(args)...);
+			return type{[](erased_ctor& ec, pass_arg<Args>... args) {
+				return (reinterpret_cast<F&>(ec))(args...);
 			}};
 		}
 	};

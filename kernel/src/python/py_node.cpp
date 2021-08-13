@@ -104,7 +104,7 @@ auto find_idx(const Node& N, long idx) -> link {
 	// support for Pythonish indexing from both ends
 	std::size_t positive_idx = [&] {
 		if(idx < 0) {
-			idx += N.size();
+			idx += static_cast<long>(N.size());
 			if(idx < 0) throw py::key_error("Index out of bounds");
 		}
 		return static_cast<std::size_t>(idx);

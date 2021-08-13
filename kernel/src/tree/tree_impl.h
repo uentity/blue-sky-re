@@ -49,7 +49,7 @@ auto deref_path_impl(
 
 	// split path into elements
 	if(path.empty()) return {};
-	auto path_parts = std::vector< std::pair<std::string::const_iterator, std::string::const_iterator> >{};
+	auto path_parts = std::vector< std::pair<std::string_view::const_iterator, std::string_view::const_iterator> >{};
 	boost::split(path_parts, path, boost::is_any_of("/"));
 
 	// setup search root
