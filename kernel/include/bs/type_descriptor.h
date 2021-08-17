@@ -1,7 +1,5 @@
-/// @file
 /// @author uentity
 /// @date 12.01.2016
-/// @brief Type descriptor class for BS types
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -164,7 +162,7 @@ public:
 
 		// store type-erased constructor
 		using ctor_t = normalized_ctor<Fsign>;
-		auto src_f = function_view{std::forward<F>(f)};
+		auto src_f = function_view<Fsign>{std::forward<F>(f)};
 		auto creator_f = ctor_t::template make<decltype(src_f)>();
 
 		creators_.insert_or_assign(typeid(typename ctor_t::type), ctor_handle{
