@@ -131,7 +131,7 @@ auto map_link::n_target() const -> const node_mapper_f* {
 }
 
 auto map_link::reset_settings(Event update_on, TreeOpts opts) -> void {
-	caf::anon_send(ei::actor(*this), a_apply{}, update_on, opts);
+	caf::anon_send<caf::message_priority::high>(ei::actor(*this), a_apply{}, update_on, opts);
 }
 
 /*-----------------------------------------------------------------------------

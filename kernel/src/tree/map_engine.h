@@ -182,7 +182,7 @@ public:
 private:
 	caf::actor inp_listener_;
 
-	auto reset_input_listener(Event update_on, TreeOpts opts) -> void;
+	auto reset_input_listener() -> void;
 };
 
 NAMESPACE_END(blue_sky::tree)

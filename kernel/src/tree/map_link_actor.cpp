@@ -134,31 +134,36 @@ NAMESPACE_END()
 map_link_actor::map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl) :
 	super(cfg, std::move(self_grp), std::move(Limpl))
 {
-	using namespace allow_enumops;
-	const auto& simpl = mimpl();
-	// set detached flag if requested
-	if(enumval(simpl.opts_ & TreeOpts::DetachedWorkers))
-		ropts_.data_node |= ReqOpts::Detached;
-	// start input node events tracker
-	reset_input_listener(simpl.update_on_, simpl.opts_);
-}
-
-auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> void {
 	// auto-respawn listener when it exits
 	set_down_handler([=](const caf::down_msg&) {
 		const auto& simpl = mimpl();
-		adbg(this) << "starting listener on input node, is_nil = " << simpl.in_.is_nil() << std::endl;
+		adbg(this) << "starting listener on input node, is_nil = " << simpl.in_.is_nil()
+			<< ", update_on = " << enumval(simpl.update_on_) << std::endl;
 
 		if(simpl.in_ && enumval(simpl.update_on_))
 			// [NOTE] spawn monitored actor <=> calling monitor(...) afterwards
-			inp_listener_ = spawn_in_group<caf::monitored>(
+			inp_listener_ = this->spawn_in_group<caf::monitored>(
 				simpl.in_.home(), input_ack_retranslator,
 				caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), simpl.out_.actor(),
-				update_on, opts
+				simpl.update_on_, simpl.opts_
 			);
-		else
+		else {
 			inp_listener_ = nullptr;
+			adbg(this) << "~~~ Event listener not started!" << std::endl;
+		}
 	});
+
+	// start input node events tracker
+	reset_input_listener();
+}
+
+auto map_link_actor::reset_input_listener() -> void {
+	// copy detached flag to ReqOpts
+	const auto& simpl = mimpl();
+	if(enumval(simpl.opts_ & TreeOpts::DetachedWorkers))
+		ropts_.data_node |= ReqOpts::Detached;
+	else
+		ropts_.data_node &= ~ReqOpts::Detached;
 
 	// if listener wasn't started fake it's death to trigger respawn
 	// otherwise kill & restart running one
@@ -232,7 +237,10 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 		[](a_mlnk_fresh) { return true; },
 
 		[=](a_apply, const Event update_on, const TreeOpts opts) {
-			reset_input_listener(update_on, opts);
+			auto& simpl = mimpl();
+			simpl.update_on_ = update_on;
+			simpl.opts_ = opts;
+			reset_input_listener();
 		}
 
 	}, super::make_typed_behavior());
