@@ -1,7 +1,5 @@
-/// @file
 /// @author uentity
 /// @date 27.03.2019
-/// @brief Function view (or function ref) to be used as arg type for passing callable
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -157,7 +155,7 @@ public:
 	}
 
 	// call stored callable with passed args
-	template<typename... Ts>
+	template<typename... Ts, typename = std::enable_if_t< std::is_invocable_v<callable_t, Ts...> >>
 	decltype(auto) operator()(Ts&&... xs) const
 		noexcept(noexcept(erased_fn_(fn_mem(), std::forward<Ts>(xs)...)))
 	{
