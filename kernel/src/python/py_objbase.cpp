@@ -45,6 +45,16 @@ void py_bind_objbase(py::module& m) {
 			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
 
+		.def("apply",
+			[](objbase& self, py_obj_transaction tr, objbase::process_tr_cb f) {
+				self.apply(
+					pytr_through_queue(std::move(tr)), pipe_through_queue(std::move(f), launch_async)
+				);
+			},
+			"tr"_a, "f"_a,
+			"Send transaction `tr` to object's queue and invoke `f` when tr finishes, return immediately"
+		)
+
 		.def("touch",
 			&objbase::touch, "tres"_a = prop::propdict{},
 			"Send empty transaction to trigger `data modified` signal"

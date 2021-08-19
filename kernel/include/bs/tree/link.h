@@ -195,9 +195,6 @@ public:
 	/// make pointee data modification atomically
 	auto data_apply(obj_transaction tr) const -> tr_result;
 
-	/// sends empty transaction object to trigger `data modified` signal
-	auto data_touch(tr_result tres = {}) const -> void;
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API
 	//
@@ -210,6 +207,12 @@ public:
 
 	auto apply(launch_async_t, link_transaction tr) const -> void;
 	auto data_apply(launch_async_t, obj_transaction tr) const -> void;
+	/// run transaction and then inkvoke callback with tr tr_result
+	using process_tr_cb = std::function<void(tr_result)>;
+	auto data_apply(obj_transaction tr, process_tr_cb f) const -> void;
+
+	/// sends empty transaction object to trigger `data modified` signal
+	auto data_touch(tr_result tres = {}) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Subscribe to link events

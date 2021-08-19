@@ -228,6 +228,14 @@ auto objbase::apply(launch_async_t, obj_transaction tr) -> void {
 	caf::anon_send(actor(), a_apply(), std::move(tr));
 }
 
+auto objbase::apply(obj_transaction tr, process_tr_cb f) -> void {
+	anon_request(
+		actor(), kernel::radio::timeout(true), false,
+		[f = std::move(f)](tr_result::box tres) { f(std::move(tres)); },
+		a_apply{}, std::move(tr)
+	);
+}
+
 auto objbase::touch(tr_result tres) -> void {
 	caf::anon_send(actor(), a_apply(), obj_transaction{
 		[tres = std::move(tres)]() mutable { return std::move(tres); }

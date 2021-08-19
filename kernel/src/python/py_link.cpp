@@ -245,6 +245,16 @@ void py_bind_link(py::module& m) {
 			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
 
+		.def("data_apply",
+			[](const link& L, py_obj_transaction tr, link::process_tr_cb f) {
+				L.data_apply(
+					pytr_through_queue(std::move(tr)), pipe_through_queue(std::move(f), launch_async)
+				);
+			},
+			"tr"_a, "f"_a,
+			"Send transaction `tr` to object's queue and invoke `f` when tr finishes, return immediately"
+		)
+
 		.def("data_touch",
 			&link::data_touch, "tres"_a = prop::propdict{},
 			"Send empty transaction object to trigger `data modified` signal"
@@ -427,6 +437,7 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("tag", &map_link::tag)
 		.def_property_readonly("input", &map_link::input)
 		.def_property_readonly("output", &map_link::output)
+		.def_property_readonly("has_target", [](const map_link& L) { return L.l_target() || L.n_target(); })
 
 		.def(
 			"reset_settings", &map_link::reset_settings, "update_on"_a, "opts"_a,

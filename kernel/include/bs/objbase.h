@@ -102,6 +102,9 @@ public:
 	/// runs modificator in message queue of this object
 	virtual auto apply(obj_transaction tr) -> tr_result final;
 	virtual auto apply(launch_async_t, obj_transaction tr) -> void final;
+	/// run transaction and then inkvoke callback with tr tr_result
+	using process_tr_cb = tree::link::process_tr_cb;
+	auto apply(obj_transaction tr, process_tr_cb f) -> void;
 
 	/// sends empty transaction to trigger `data modified` signal
 	virtual auto touch(tr_result tres = {}) -> void final;

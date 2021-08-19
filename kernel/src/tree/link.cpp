@@ -262,6 +262,14 @@ auto link::data_apply(launch_async_t, obj_transaction tr) const -> void {
 	caf::anon_send(pimpl()->actor(*this), a_apply(), a_data(), std::move(tr));
 }
 
+auto link::data_apply(obj_transaction tr, process_tr_cb f) const -> void {
+	anon_request(
+		actor(), kernel::radio::timeout(true), false,
+		[f = std::move(f)](tr_result::box tres) { f(std::move(tres)); },
+		a_apply{}, a_data{}, std::move(tr)
+	);
+}
+
 auto link::data_touch(tr_result tres) const -> void {
 	caf::anon_send(
 		pimpl()->actor(*this), a_apply(), a_data(),
