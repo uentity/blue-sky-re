@@ -37,6 +37,7 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 			const auto renamed_impl = [=](
 				caf::actor origin, auto& lid, auto& new_name, auto& old_name
 			) {
+				//bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 				handler_impl(self, weak_root, std::move(origin), Event::LinkRenamed, {
 					{"link_id", lid},
 					{"new_name", std::move(new_name)},
@@ -44,16 +45,15 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 				});
 			};
 
-			// this node leaf was renamed
 			res = res.or_else(
+				// this node leaf was renamed
 				[=] (
 					a_ack, const lid_type& lid, a_lnk_rename, std::string new_name, std::string old_name
 				) {
 					renamed_impl({}, lid, new_name, old_name);
-				}
-			);
-			// deeper subtree leaf was renamed
-			res = res.or_else(
+				},
+
+				// deeper subtree leaf was renamed
 				[=] (
 					a_ack, caf::actor src, const lid_type& lid,
 					a_lnk_rename, std::string new_name, std::string old_name
@@ -76,17 +76,16 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 				});
 			};
 
-			// this node leaf status changed
 			res = res.or_else(
+				// this node leaf status changed
 				[=](
 					a_ack, const lid_type& lid,
 					a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s
 				) {
 					status_impl({}, lid, req, new_s, prev_s);
-				}
-			);
-			// deeper subtree leaf status changed
-			res = res.or_else(
+				},
+
+				// deeper subtree leaf status changed
 				[=](
 					a_ack, caf::actor src, const lid_type& lid,
 					a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s
@@ -109,14 +108,13 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 				handler_impl(self, weak_root, std::move(origin), Event::DataModified, std::move(params));
 			};
 
-			// this node leaf data changed
 			res = res.or_else(
+				// this node leaf data changed
 				[=](a_ack, const lid_type& lid, a_data, tr_result::box trbox) {
 					datamod_impl({}, lid, std::move(trbox));
-				}
-			);
-			// deeper subtree leaf status changed
-			res = res.or_else(
+				},
+
+				// deeper subtree leaf status changed
 				[=](a_ack, caf::actor src, const lid_type& lid, a_data, tr_result::box trbox) {
 					datamod_impl(std::move(src), lid, std::move(trbox));
 				}
@@ -136,6 +134,7 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 						{"pos", (prop::integer)pos}
 					});
 				},
+
 				// move
 				[=](
 					a_ack, caf::actor src, a_node_insert,
@@ -190,9 +189,12 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 auto node::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
 	auto baby = make_listener(*this, std::move(f), listen_to);
-	auto baby_id = baby.id();
-	caf::anon_send(pimpl()->actor(*this), a_subscribe{}, std::move(baby));
-	return baby_id;
+	auto baby_id = actorf<std::uint64_t>(
+		pimpl()->actor(*this), kernel::radio::timeout(), a_subscribe{}, std::move(baby)
+	);
+	if(!baby_id)
+		throw baby_id.error();
+	return *baby_id;
 }
 
 auto node::unsubscribe(deep_t) const -> void {

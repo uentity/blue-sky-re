@@ -102,9 +102,12 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 auto link::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
 	auto baby = make_listener(*this, std::move(f), listen_to);
-	auto baby_id = baby.id();
-	caf::anon_send(pimpl()->actor(*this), a_subscribe{}, std::move(baby));
-	return baby_id;
+	auto baby_id = actorf<std::uint64_t>(
+		pimpl()->actor(*this), kernel::radio::timeout(), a_subscribe{}, std::move(baby)
+	);
+	if(!baby_id)
+		throw baby_id.error();
+	return *baby_id;
 }
 
 auto link::unsubscribe(deep_t) const -> void {

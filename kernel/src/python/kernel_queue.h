@@ -46,6 +46,7 @@ auto pytr_through_queue(std::function< py::object(Ts...) > tr) {
 		auto res = papa->make_response_promise<tr_result::box>();
 		papa->request(
 			KRADIO.queue_actor(), kernel::radio::timeout(true),
+			// wrap `tr` with optional to make early release
 			transaction{[tr = std::optional{std::move(tr)}, argstup = std::make_tuple(std::forward<Ts>(args)...)]
 			() mutable {
 				auto r = std::apply(std::move(*tr), std::move(argstup));
