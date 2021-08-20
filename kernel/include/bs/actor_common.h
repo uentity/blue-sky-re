@@ -126,7 +126,10 @@ NAMESPACE_END(detail)
 template<typename T, typename U> using merge_with = typename detail::merge_with<T, U>::type;
 
 /// tag value for high priority messages
-inline constexpr auto high_prio = caf::message_priority::high;
+// [NOTE] disabled high prio messages due to some bugs in processing
+// [TODO] bring back after issue resolved
+//inline constexpr auto high_prio = caf::message_priority::high;
+inline constexpr auto high_prio = caf::message_priority::normal;
 
 BS_API auto forward_caf_error(const caf::error& er, std::string_view msg = {}) -> error;
 
