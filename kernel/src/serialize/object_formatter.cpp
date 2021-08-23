@@ -1,7 +1,5 @@
-/// @file
 /// @author uentity
 /// @date 01.07.2019
-/// @brief Implements manipulations with object formatters
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -176,18 +174,20 @@ auto operator<(std::string_view lhs, const object_formatter& rhs) {
 	return lhs < rhs.name;
 }
 
-auto object_formatter::save(const objbase& obj, std::string obj_fname) const -> error {
-	FM.register_formatter(obj, name);
-	auto res = error::eval_safe([&]{ first(obj, std::move(obj_fname), name); });
-	FM.deregister_formatter(obj);
-	return res;
+auto object_formatter::save(const objbase& obj, std::string obj_fname) const noexcept -> error {
+	const auto finally = scope_guard{[&] { error::eval_safe([&] { FM.deregister_formatter(obj); }); }};
+	return error::eval_safe([&] {
+		FM.register_formatter(obj, name);
+		first(obj, std::move(obj_fname), name);
+	});
 }
 
-auto object_formatter::load(objbase& obj, std::string obj_fname) const -> error {
-	FM.register_formatter(obj, name);
-	auto res = error::eval_safe([&]{ second(obj, std::move(obj_fname), name); });
-	FM.deregister_formatter(obj);
-	return res;
+auto object_formatter::load(objbase& obj, std::string obj_fname) const noexcept -> error {
+	const auto finally = scope_guard{[&] { error::eval_safe([&] { FM.deregister_formatter(obj); }); }};
+	return error::eval_safe([&] {
+		FM.register_formatter(obj, name);
+		second(obj, std::move(obj_fname), name);
+	});
 }
 
 NAMESPACE_END(blue_sky)

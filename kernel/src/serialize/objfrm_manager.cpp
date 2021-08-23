@@ -1,7 +1,5 @@
-/// @file
 /// @author uentity
 /// @date 08.04.2020
-/// @brief Objects save/load jobs manager impl
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -28,8 +26,10 @@ objfrm_manager::objfrm_manager(caf::actor_config& cfg, bool is_saving) :
 {}
 
 auto objfrm_manager::session_ack() -> void {
-	if(session_finished_ && (nstarted_ == nfinished_)) {
+	if(session_finished_ && (nstarted_ == nfinished_) && boxed_errs_.pending()) {
 		boxed_errs_.deliver(er_stack_);
+		nstarted_ = nfinished_ = 0;
+		session_finished_ = false;
 	}
 }
 

@@ -68,20 +68,24 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 
 	auto begin_node(const tree::node& N) -> error {
 		return error::eval_safe(
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); }
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
+			// write down node's metadata nessessary to load it later
+			[&]{ return head().map( [&](auto* ar) {
+					if(N) {
+						// custom leafs order
+						std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
+						(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+					}
+					// flush buffers on current head - best we can do new
+					// [TODO] find a way to early close link file just after that point
+					necks_.back().flush();
+			}); }
 		);
 	}
 
 	auto end_node(const tree::node& N) -> error {
 		return error::eval_safe(
-			// write down node's metadata nessessary to load it later
-			[&]{ return head().map( [&](auto* ar) {
-				if(N) {
-					// custom leafs order
-					std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
-					(*ar)(cereal::make_nvp("leafs_order", leafs_order));
-				}
-				// and finish
+			[&]{ return head().map([&](auto* ar) {
 				epilogue(*ar, N);
 			}); }
 		);

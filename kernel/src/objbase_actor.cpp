@@ -102,10 +102,9 @@ return typed_behavior {
 
 		// run save job
 		// not using transaction as saving must not trigger DataModified event
-		return error::eval_safe([&] {
-			//caf::aout(this) << "Saving " << fname << std::endl;
-			return F->save(*obj, fname);
-		});
+		// not wrapping in `eval_safe()` because formatter does that internally
+		//caf::aout(this) << "Saving " << fname << std::endl;
+		return F->save(*obj, fname);
 	},
 
 	// immediate load
@@ -118,10 +117,9 @@ return typed_behavior {
 
 		// apply load job
 		// not using transaction as loading must not trigger DataModified event
-		return error::eval_safe([&] {
-			//caf::aout(this) << "Loading " << fname << std::endl;
-			return F->load(*obj, fname);
-		});
+		// not wrapping in `eval_safe()` because formatter does that internally
+		//caf::aout(this) << "Loading " << fname << std::endl;
+		return F->load(*obj, fname);
 	},
 
 	// lazy load
@@ -133,6 +131,9 @@ return typed_behavior {
 	[=](a_lazy, a_load, const std::string& fmt_name, const std::string& fname, bool with_node) {
 		auto orig_me = current_behavior();
 		become(caf::message_handler{
+			// deny nested lazy loads
+			[](a_lazy, a_load, const std::string&, const std::string&, bool) { return false; },
+
 			// return remembered flag whether to read node from file
 			[=](a_lazy, a_load, a_data_node) { return with_node; },
 
