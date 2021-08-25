@@ -10,6 +10,7 @@
 
 #include <bs/common.h>
 #include <bs/tree/link.h>
+#include "../tree/private_common.h"
 
 #include <caf/actor_addr.hpp>
 #include <caf/actor.hpp>
@@ -28,7 +29,8 @@
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 // kernel's queue interface
 using kqueue_actor_type = caf::typed_actor<
-	caf::replies_to<transaction>::with<tr_result::box>
+	caf::replies_to<transaction>::with<tr_result::box>,
+	caf::replies_to<a_ack>::with<std::thread::id>
 >;
 
 struct BS_HIDDEN_API radio_subsyst {
@@ -64,6 +66,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto enqueue(transaction tr) -> tr_result;
 	auto enqueue(launch_async_t, transaction tr) -> void;
 	auto stop_queue(bool wait_exit) -> void;
+	auto queue_thread_id() const -> std::thread::id;
 
 	// server actor management
 	auto toggle(bool on) -> error;
@@ -93,6 +96,7 @@ private:
 
 	// queue
 	kqueue_actor_type queue_;
+	std::thread::id queue_tid_;
 
 	caf::actor radio_;
 

@@ -16,7 +16,6 @@
 
 #include <caf/config_option_adder.hpp>
 #include <caf/parser_state.hpp>
-#include <caf/init_global_meta_objects.hpp>
 #include <caf/detail/config_consumer.hpp>
 #include <caf/detail/parser/read_config.hpp>
 #include <caf/detail/parser/read_string.hpp>

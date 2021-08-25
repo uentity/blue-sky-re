@@ -12,6 +12,8 @@
 
 #include <caf/typed_actor.hpp>
 
+#include <thread>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
@@ -63,5 +65,8 @@ CAF_BEGIN_TYPE_ID_BLOCK(bs_private, blue_sky::detail::bs_private_cid_begin)
 	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::engine::sp_engine_impl))
 	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::link_impl>))
 	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::node_impl>))
+	CAF_ADD_TYPE_ID(bs_private, (std::thread::id))
 
 CAF_END_TYPE_ID_BLOCK(bs_private)
+
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::thread::id)

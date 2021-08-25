@@ -25,7 +25,9 @@ auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::beh
 	return {
 		[](const transaction& tr) -> tr_result::box {
 			return pack(tr_eval(tr));
-		}
+		},
+
+		[](a_ack) { return std::this_thread::get_id(); }
 	};
 }
 
@@ -35,7 +37,17 @@ NAMESPACE_END()
 //  queue management
 //
 auto radio_subsyst::spawn_queue() -> void {
+	// we can save thread ID, because detached actors run in their own thread
 	queue_ = actor_sys_->spawn<caf::detached>(kqueue_processor);
+	// [NOTE] need to explicitly supply scoped_actor because radio init is not yet finished
+	auto r = caf::scoped_actor{*actor_sys_};
+	actorf<std::thread::id>(r, queue_, kernel::radio::timeout(), a_ack_v)
+	.map([this](std::thread::id tid) { queue_tid_ = std::move(tid); })
+	.map_error([](const error& er) { throw er; });
+}
+
+auto radio_subsyst::queue_thread_id() const -> std::thread::id {
+	return queue_tid_;
 }
 
 auto radio_subsyst::stop_queue(bool wait_exit) -> void {
