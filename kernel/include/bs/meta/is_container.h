@@ -35,14 +35,21 @@ template<typename T> inline constexpr auto is_container_v = is_container_t<T>::v
 //  Test if given type is map-like (container that has `mapped_type`)
 //
 template<typename T, typename = void>
-struct is_map : std::false_type { using mapped_type = void; };
+struct is_map : std::false_type {
+	using key_type = void;
+	using mapped_type = void;
+};
 
 template<typename T>
-struct is_map<T, std::enable_if_t<is_container_v<T>, std::void_t<typename T::mapped_type>>> : std::true_type {
+struct is_map<T, std::enable_if_t<
+	is_container_v<T>, std::void_t<typename T::key_type, typename T::mapped_type>
+>> : std::true_type {
+	using key_type = typename T::key_type;
 	using mapped_type = typename T::mapped_type;
 };
 
 template<typename T> using is_map_t = is_map<remove_cvref_t<T>>;
+template<typename T> using key_type = typename is_map_t<T>::key_type;
 template<typename T> using mapped_type = typename is_map_t<T>::mapped_type;
 template<typename T> inline constexpr auto is_map_v = is_map_t<T>::value;
 

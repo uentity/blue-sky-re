@@ -229,7 +229,7 @@ auto radio_subsyst::start_server() -> void {
 
 auto radio_subsyst::start_client(const std::string& host) -> error {
 	auto netnode = actor_sys_->middleman().connect(host, get_or(BSCONFIG, "port", def_port));
-	if(!netnode) return { actor_sys_->render(netnode.error()) };
+	if(!netnode) return { to_string(netnode.error()) };
 	else {
 		bsout() << "Successfully connected to '{}:{}'" <<
 			host << get_or(BSCONFIG, "port", def_port) << bs_end;
@@ -238,7 +238,7 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
 		*netnode, "radio_station", caf::make_message(), kernel::radio::timeout(true)
 	);
-	if(!station) return { actor_sys_->render(station.error()) };
+	if(!station) return { to_string(station.error()) };
 
 	// get published links
 	auto station_f = caf::make_function_view(*station);

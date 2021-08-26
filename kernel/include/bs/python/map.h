@@ -1,7 +1,5 @@
-/// @file
 /// @author uentity
 /// @date 23.05.2019
-/// @brief Extend opaque map-like container bindings provided by pybind11
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -12,7 +10,10 @@
 
 NAMESPACE_BEGIN(blue_sky::python)
 NAMESPACE_BEGIN(detail)
-
+using namespace py::detail;
+///////////////////////////////////////////////////////////////////////////////
+//  traits
+//
 // trait to detect whether map has `erase()` method or not
 template<typename Map, typename = void> struct has_erase : std::false_type {};
 
@@ -23,31 +24,70 @@ struct has_erase<Map, std::void_t<decltype(std::declval<Map>().erase(typename Ma
 template<typename Map>
 inline constexpr auto has_erase_v = has_erase<Map>::value;
 
-// gen base bindings for map without `erase()`
+// same for `try_emplace()`
+template<typename Map, typename = void> struct has_try_emplace : std::false_type {};
+
+template<typename Map>
+struct has_try_emplace<Map, std::void_t<decltype(
+	std::declval<Map>().try_emplace(typename Map::key_type{}, typename Map::mapped_type{})
+)>> : std::true_type {};
+
+template<typename Map>
+inline constexpr auto has_try_emplace_v = has_try_emplace<Map>::value;
+
+///////////////////////////////////////////////////////////////////////////////
+// map assignment impl
+//
+template <typename, typename, typename... Args> void map_setitem(Args&&...) {}
+
+// Map assignment when copy-assignable: just copy the value
+template <typename Map, typename Class_>
+void map_setitem(Class_& cl) {
+	using KeyType = typename Map::key_type;
+	using MappedType = typename Map::mapped_type;
+
+	cl.def("__setitem__", [](Map &m, py::object k, py::object v) {
+		if constexpr(has_try_emplace_v<Map>) {
+			m.try_emplace(
+				py::cast<KeyType>(std::move(k)), py::cast<MappedType>(std::move(v))
+			);
+		}
+		else {
+			auto ck = py::cast<KeyType>(std::move(k));
+			if(auto it = m.find(ck); it != m.end())
+				it->second = py::cast<MappedType>(std::move(v));
+			else
+				m.emplace(std::move(ck), py::cast<MappedType>(std::move(v)));
+		}
+	});
+}
+
+// this is copy-paste from pybind11 map binding except that `__del__` is only added if `erase()` detected
 template <typename Map, typename holder_type = std::unique_ptr<Map>, typename... Args>
-auto bind_growing_map(py::handle scope, const std::string &name, Args&&... args) {
+auto bind_base_map(py::handle scope, const std::string &name, Args&&... args) {
 	using KeyType = typename Map::key_type;
 	using MappedType = typename Map::mapped_type;
 	using Class_ = py::class_<Map, holder_type>;
-	namespace detail = py::detail;
 	using namespace py;
 
 	// If either type is a non-module-local bound type then make the map binding non-local as well;
 	// otherwise (e.g. both types are either module-local or converting) the map will be
 	// module-local.
-	auto tinfo = detail::get_type_info(typeid(MappedType));
+	auto tinfo = py::detail::get_type_info(typeid(MappedType));
 	bool local = !tinfo || tinfo->module_local;
 	if (local) {
-		tinfo = detail::get_type_info(typeid(KeyType));
+		tinfo = py::detail::get_type_info(typeid(KeyType));
 		local = !tinfo || tinfo->module_local;
 	}
 
-	Class_ cl(scope, name.c_str(), pybind11::module_local(local), std::forward<Args>(args)...);
+	Class_ cl(scope, name.c_str(), py::module_local(local), std::forward<Args>(args)...);
 
-	cl.def(init<>());
+	cl.def(py::init<>());
 
 	// Register stream insertion operator (if possible)
-	detail::map_if_insertion_operator<Map, Class_>(cl, name);
+	py::detail::map_if_insertion_operator<Map, Class_>(cl, name);
+	// Elements sssignment
+	map_setitem<Map, Class_>(cl);
 
 	cl.def("__bool__",
 		[](const Map &m) -> bool { return !m.empty(); },
@@ -55,50 +95,44 @@ auto bind_growing_map(py::handle scope, const std::string &name, Args&&... args)
 	);
 
 	cl.def("__iter__",
-		[](Map &m) { return make_key_iterator(m.begin(), m.end()); },
+		[](Map &m) { return py::make_key_iterator(m.begin(), m.end()); },
 		keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
 	);
 
 	cl.def("items",
-		[](Map &m) { return make_iterator(m.begin(), m.end()); },
+		[](Map &m) { return py::make_iterator(m.begin(), m.end()); },
 		keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
 	);
 
 	cl.def("__getitem__",
 		[](Map &m, const KeyType &k) -> MappedType & {
-			auto it = m.find(k);
-			if (it == m.end())
-				throw key_error();
-			return it->second;
+			if(auto it = m.find(k); it != m.end())
+				return it->second;
+			throw key_error();
 		},
 		return_value_policy::reference_internal // ref + keepalive
 	);
 
 	cl.def("__contains__",
 		[](Map &m, const KeyType &k) -> bool {
-			auto it = m.find(k);
-			if (it == m.end())
-				return false;
-			return true;
+			return m.find(k) != m.end();
 		}
 	);
 
-	// Assignment provided only if the type is copyable
-	detail::map_assignment<Map, Class_>(cl);
-
 	cl.def("__len__", &Map::size);
+
+	if constexpr(has_erase_v<Map>) {
+		cl.def("__delitem__",
+			[](Map &m, const KeyType &k) {
+				if(auto it = m.find(k); it != m.end())
+					m.erase(it);
+				throw key_error();
+			}
+		);
+	}
 
 	return cl;
 }
-
-// generate base binding dependith on whether `erase()` presents or not
-template <typename Map, typename holder_type = std::unique_ptr<Map>, typename... Args>
-auto bind_base_map(py::handle scope, const std::string &name, Args&&... args) {
-	if constexpr(has_erase_v<Map>)
-		return py::bind_map<Map>(scope, name, std::forward<Args>(args)...);
-	else
-		return bind_growing_map<Map>(scope, name, std::forward<Args>(args)...);
-};
 
 // additional methods for map-like containers
 template<typename Map, typename PyMap>
@@ -115,6 +149,7 @@ auto make_rich_map(PyMap& cl) -> PyMap& {
 			tgt[py::detail::cast_op<KeyType>(key_caster)] = py::detail::cast_op<MappedType>(value_caster);
 		}
 	};
+
 	cl.def(py::init([&from_pydict](py::dict D) {
 		Map M;
 		from_pydict(M, std::move(D));

@@ -110,7 +110,8 @@ void py_bind_common(py::module& m) {
 	// propdict binding
 	bind_rich_map<prop::propdict>(m, "propdict", py::module_local(false));
 	// allow passing compatible Python dict in place of `propdict` (and init propdict from that Py dict)
-	py::implicitly_convertible<prop::propdict::underlying_type, prop::propdict>();
+	// [NOTE] disabled, because `bind_rich_map()` register implicit conversion from py dict
+	//py::implicitly_convertible<prop::propdict::underlying_type, prop::propdict>();
 
 	// opaque bindings of propbooks
 	bind_rich_map<prop::propbook_s>(m, "propbook_s", py::module_local(false));

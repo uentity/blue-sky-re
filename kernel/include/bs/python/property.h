@@ -43,10 +43,12 @@ struct type_caster<blue_sky::prop::property> {
 	}
 
 	template <typename Variant>
-	static handle cast(Variant &&src, return_value_policy policy, handle parent) {
+	static handle cast(Variant&& src, return_value_policy policy, handle parent) {
 		return blue_sky::prop::is_none(src) ?
 			pybind11::none().release() :
-			make_caster<UType>::cast(std::forward<Variant>(src), policy, parent);
+			make_caster<UType>::cast(
+				blue_sky::meta::forward_as<Variant, UType>(src), policy, parent
+			);
 	}
 };
 
