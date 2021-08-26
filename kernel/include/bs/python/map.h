@@ -38,26 +38,44 @@ inline constexpr auto has_try_emplace_v = has_try_emplace<Map>::value;
 ///////////////////////////////////////////////////////////////////////////////
 // map assignment impl
 //
-template <typename, typename, typename... Args> void map_setitem(Args&&...) {}
-
-// Map assignment when copy-assignable: just copy the value
 template <typename Map, typename Class_>
-void map_setitem(Class_& cl) {
+void map_setitem(enable_if_t<
+	is_copy_assignable<typename Map::mapped_type>::value
+	|| is_copy_constructible<typename Map::mapped_type>::value,
+	Class_
+> &cl) {
+	constexpr bool can_assign = is_copy_assignable<typename Map::mapped_type>::value;
 	using KeyType = typename Map::key_type;
 	using MappedType = typename Map::mapped_type;
 
-	cl.def("__setitem__", [](Map &m, py::object k, py::object v) {
+	cl.def("__setitem__", [](Map &m, KeyType k, MappedType v) {
 		if constexpr(has_try_emplace_v<Map>) {
-			m.try_emplace(
-				py::cast<KeyType>(std::move(k)), py::cast<MappedType>(std::move(v))
-			);
+			const auto [pos, added] = m.try_emplace(std::move(k), std::move(v));
+			if(!added) {
+				if constexpr(can_assign)
+					pos->second = std::move(v);
+				else {
+				   // value type is not copy assignable so the only way to insert it is to erase it first...
+				   m.erase(pos);
+				   m.emplace(std::move(k), std::move(v));
+				}
+			}
 		}
 		else {
-			auto ck = py::cast<KeyType>(std::move(k));
-			if(auto it = m.find(ck); it != m.end())
-				it->second = py::cast<MappedType>(std::move(v));
-			else
-				m.emplace(std::move(ck), py::cast<MappedType>(std::move(v)));
+			if constexpr(can_assign) {
+				if(auto it = m.find(k); it != m.end())
+					it->second = std::move(v);
+				else
+					m.emplace(std::move(k), std::move(v));
+			}
+			else {
+			   // We can't use m[k] = v; because value type might not be default constructable
+			   const auto [pos, added] = m.emplace(k, v);
+			   if (!added) {
+				   m.erase(pos);
+				   m.emplace(std::move(k), std::move(v));
+			   }
+			}
 		}
 	});
 }
