@@ -10,7 +10,6 @@
 
 NAMESPACE_BEGIN(blue_sky::python)
 NAMESPACE_BEGIN(detail)
-using namespace py::detail;
 ///////////////////////////////////////////////////////////////////////////////
 //  traits
 //
@@ -38,15 +37,15 @@ inline constexpr auto has_try_emplace_v = has_try_emplace<Map>::value;
 ///////////////////////////////////////////////////////////////////////////////
 // map assignment impl
 //
-template<typename, typename, typename... Args> void map_setitem(Args&...) { }
+template<typename, typename, typename... Args> auto map_setitem(Args&...) {}
 
 template <typename Map, typename Class_>
-void map_setitem(enable_if_t<
-	is_copy_assignable<typename Map::mapped_type>::value
-	|| is_copy_constructible<typename Map::mapped_type>::value,
+auto map_setitem(py::detail::enable_if_t<
+	py::detail::is_copy_assignable<typename Map::mapped_type>::value
+	|| py::detail::is_copy_constructible<typename Map::mapped_type>::value,
 	Class_
 > &cl) {
-	static constexpr bool can_assign = is_copy_assignable<typename Map::mapped_type>::value;
+	static constexpr bool can_assign = py::detail::is_copy_assignable<typename Map::mapped_type>::value;
 	using KeyType = typename Map::key_type;
 	using MappedType = typename Map::mapped_type;
 
