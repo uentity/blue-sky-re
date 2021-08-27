@@ -13,13 +13,15 @@
 #include <bs/property.h>
 #include <bs/propdict.h>
 
-#include <map>
-#include <boost/test/unit_test.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+
+#include <boost/test/unit_test.hpp>
 #include <caf/deep_to_string.hpp>
 
 #include "test_objects.h"
+
+#include <map>
 
 template<typename T, typename U>
 constexpr auto equal_il(const T& rhs, std::initializer_list<U> il) {
@@ -44,11 +46,11 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	p = "Test";
 	BOOST_TEST(get<std::string>(p) == "Test");
 	p = true;
-	BOOST_TEST(p.index() == 0);
+	BOOST_TEST(p.index() == 0u);
 	p = prop::none();
-	BOOST_TEST(p.index() == 7);
+	BOOST_TEST(p.index() == 7u);
 	p = sp_obj{};
-	BOOST_TEST(p.index() == 7);
+	BOOST_TEST(p.index() == 7u);
 
 	// test integer scalars list
 	auto intV = {integer(42), integer(24), integer(27)};
