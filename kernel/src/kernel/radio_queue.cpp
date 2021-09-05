@@ -46,10 +46,6 @@ auto radio_subsyst::spawn_queue() -> void {
 	.map_error([](const error& er) { throw er; });
 }
 
-auto radio_subsyst::queue_thread_id() const -> std::thread::id {
-	return queue_tid_;
-}
-
 auto radio_subsyst::stop_queue(bool wait_exit) -> void {
 	if(!queue_) return;
 	auto self = caf::scoped_actor{system(), false};
@@ -61,14 +57,40 @@ auto radio_subsyst::stop_queue(bool wait_exit) -> void {
 	queue_ = nullptr;
 }
 
-auto radio_subsyst::queue_actor() -> kqueue_actor_type& { return queue_; }
-
-auto radio_subsyst::enqueue(transaction tr) -> tr_result {
-	return actorf<tr_result>(queue_actor(), kernel::radio::timeout(true), std::move(tr));
+auto radio_subsyst::is_queue_thread() const -> bool {
+	return std::this_thread::get_id() == queue_tid_;
 }
 
+auto radio_subsyst::queue_actor(bool force_anon) -> kqueue_actor_type {
+	// if called from main queue thread (tr is started from within another running tr)
+	// then return temp spawned non-detached actor (anon queue)
+	return force_anon || std::this_thread::get_id() == queue_tid_ ?
+		actor_sys_->spawn<caf::lazy_init>(kqueue_processor) :
+		queue_
+	;
+}
+
+// async tr can always be executed in main queue
 auto radio_subsyst::enqueue(launch_async_t, transaction tr) -> void {
-	caf::anon_send(queue_actor(), std::move(tr));
+	caf::anon_send(queue_, std::move(tr));
+}
+
+// sync tr must not block itself -> autospawn anon queue then
+auto radio_subsyst::enqueue(transaction tr, bool force_anon) -> tr_result {
+	return actorf<tr_result>(queue_actor(force_anon), kernel::radio::timeout(true), std::move(tr));
+}
+
+auto radio_subsyst::enqueue(caf::event_based_actor* context, transaction tr, bool force_anon)
+-> caf::result<tr_result::box> {
+	// [NOTE] using request.await to stop messages processing while tr is executed
+	auto res = context->make_response_promise<tr_result::box>();
+	context->request(
+		queue_actor(force_anon), kernel::radio::timeout(true), std::move(tr)
+	).await(
+		[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
+		[=](const caf::error& er) mutable { res.deliver(pack(tr_result{ forward_caf_error(er) })); }
+	);
+	return res;
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)

@@ -18,11 +18,11 @@
 
 NAMESPACE_BEGIN(blue_sky::python)
 
-template<typename F, typename R, typename... Args, typename... LaunchAsync>
-auto pipe_queue_impl(F&& f, const identity<R (Args...)> _, LaunchAsync... async_tag) {
+template<typename F, typename R, typename... Args, typename... EnqArgs>
+auto pipe_queue_impl(F&& f, const identity<R (Args...)> _, EnqArgs... enq_args) {
 	return [f = std::make_shared<meta::remove_cvref_t<F>>(std::forward<F>(f))](Args... args) {
 		KRADIO.enqueue(
-			LaunchAsync{}...,
+			EnqArgs{}...,
 			[f, argtup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
 				std::apply(*f, std::move(argtup));
 				return perfect;
@@ -32,32 +32,30 @@ auto pipe_queue_impl(F&& f, const identity<R (Args...)> _, LaunchAsync... async_
 };
 
 // run any given callable through kernel's queue
-template<typename F, typename... LaunchAsync>
-auto pipe_through_queue(F&& f, LaunchAsync... async_tag) {
-	return pipe_queue_impl(std::forward<F>(f), identity< deduce_callable_t<F> >{}, async_tag...);
+template<typename F, typename... EnqArgs>
+auto pipe_through_queue(F&& f, EnqArgs... enq_args) {
+	return pipe_queue_impl(std::forward<F>(f), identity< deduce_callable_t<F> >{}, enq_args...);
 };
 
 // run Python transaction (applied to link/object) through queue
 template<typename... Ts>
-auto pytr_through_queue(std::function< py::object(Ts...) > tr) {
-	return [tr = make_result_converter<tr_result>(std::move(tr), perfect)]
-	(caf::event_based_actor* papa, Ts... args) mutable -> caf::result<tr_result::box> {
-		// [NOTE] using request.await to stop messages processing while tr is executed
-		auto res = papa->make_response_promise<tr_result::box>();
-		papa->request(
-			KRADIO.queue_actor(), kernel::radio::timeout(true),
-			// wrap `tr` with optional to make early release
-			transaction{[tr = std::optional{std::move(tr)}, argstup = std::make_tuple(std::forward<Ts>(args)...)]
-			() mutable {
-				auto r = std::apply(std::move(*tr), std::move(argstup));
+auto pytr_through_queue(std::function< py::object(Ts...) > tr, bool launch_async) {
+	// If we know that calling side is going to wait for `tr` result (launch_async == false)
+	// then force running `tr` in anon queue if we're currently inside anoter transaction
+	return [
+		tr = make_result_converter<tr_result>(std::move(tr), perfect),
+		force_anon = launch_async ? false : KRADIO.is_queue_thread()
+	](caf::event_based_actor* papa, Ts... args) mutable -> caf::result<tr_result::box> {
+		return KRADIO.enqueue(
+			papa,
+			// wrap tr in `optional` to implement early release
+			[tr = std::optional{std::move(tr)}, args = std::make_tuple(std::forward<Ts>(args)...)]() mutable {
+				auto r = std::apply(std::move(*tr), std::move(args));
 				tr.reset();
 				return r;
-			}}
-		).await(
-			[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
-			[=](const caf::error& er) mutable { res.deliver(pack(tr_result{ forward_caf_error(er) })); }
+			},
+			force_anon
 		);
-		return res;
 	};
 }
 

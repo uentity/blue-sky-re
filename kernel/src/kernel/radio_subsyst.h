@@ -62,11 +62,13 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto kick_citizens() -> void;
 
 	// post transaction into kernel's queue
-	auto queue_actor() -> kqueue_actor_type&;
-	auto enqueue(transaction tr) -> tr_result;
+	auto enqueue(transaction tr, bool force_anon = false) -> tr_result;
 	auto enqueue(launch_async_t, transaction tr) -> void;
+	// use `context.request().await()` to execute tr in queue
+	auto enqueue(caf::event_based_actor* context, transaction tr, bool force_anon = false)
+		-> caf::result<tr_result::box>;
 	auto stop_queue(bool wait_exit) -> void;
-	auto queue_thread_id() const -> std::thread::id;
+	auto is_queue_thread() const -> bool;
 
 	// server actor management
 	auto toggle(bool on) -> error;
@@ -101,7 +103,9 @@ private:
 	caf::actor radio_;
 
 	auto reset_timeouts(timespan typical, timespan slow) -> void;
+
 	auto spawn_queue() -> void;
+	auto queue_actor(bool force_anon) -> kqueue_actor_type;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)
