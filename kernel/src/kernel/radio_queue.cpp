@@ -77,20 +77,29 @@ auto radio_subsyst::enqueue(launch_async_t, transaction tr) -> void {
 
 // sync tr must not block itself -> autospawn anon queue then
 auto radio_subsyst::enqueue(transaction tr, bool force_anon) -> tr_result {
-	return actorf<tr_result>(queue_actor(force_anon), kernel::radio::timeout(true), std::move(tr));
+	// if cannot run in main queue -- eval inplace
+	if(force_anon || std::this_thread::get_id() == queue_tid_)
+		return tr_eval(std::move(tr));
+	else
+		return actorf<tr_result>(queue_, kernel::radio::timeout(true), std::move(tr));
 }
 
 auto radio_subsyst::enqueue(caf::event_based_actor* context, transaction tr, bool force_anon)
 -> caf::result<tr_result::box> {
-	// [NOTE] using request.await to stop messages processing while tr is executed
-	auto res = context->make_response_promise<tr_result::box>();
-	context->request(
-		queue_actor(force_anon), kernel::radio::timeout(true), std::move(tr)
-	).await(
-		[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
-		[=](const caf::error& er) mutable { res.deliver(pack(tr_result{ forward_caf_error(er) })); }
-	);
-	return res;
+	// if cannot run in main queue -- eval inplace
+	if(force_anon || std::this_thread::get_id() == queue_tid_)
+		return pack(tr_eval(std::move(tr)));
+	else {
+		// [NOTE] using request.await to stop messages processing while tr is executed
+		auto res = context->make_response_promise<tr_result::box>();
+		context->request(
+			queue_, kernel::radio::timeout(true), std::move(tr)
+		).await(
+			[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
+			[=](const caf::error& er) mutable { res.deliver(pack(tr_result{ forward_caf_error(er) })); }
+		);
+		return res;
+	}
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)

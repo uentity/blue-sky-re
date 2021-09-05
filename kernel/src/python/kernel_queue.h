@@ -18,11 +18,11 @@
 
 NAMESPACE_BEGIN(blue_sky::python)
 
-template<typename F, typename R, typename... Args, typename... EnqArgs>
-auto pipe_queue_impl(F&& f, const identity<R (Args...)> _, EnqArgs... enq_args) {
+template<typename F, typename R, typename... Args>
+auto adapt_enqueue_impl(F&& f, const identity<R (Args...)> _) {
 	return [f = std::make_shared<meta::remove_cvref_t<F>>(std::forward<F>(f))](Args... args) {
 		KRADIO.enqueue(
-			EnqArgs{}...,
+			launch_async,
 			[f, argtup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
 				std::apply(*f, std::move(argtup));
 				return perfect;
@@ -31,15 +31,15 @@ auto pipe_queue_impl(F&& f, const identity<R (Args...)> _, EnqArgs... enq_args) 
 	};
 };
 
-// run any given callable through kernel's queue
+// adapter that posts any given callable to kernel's queue for lazy evaluation
 template<typename F, typename... EnqArgs>
-auto pipe_through_queue(F&& f, EnqArgs... enq_args) {
-	return pipe_queue_impl(std::forward<F>(f), identity< deduce_callable_t<F> >{}, enq_args...);
+auto adapt_enqueue(F&& f) {
+	return adapt_enqueue_impl(std::forward<F>(f), identity< deduce_callable_t<F> >{});
 };
 
-// run Python transaction (applied to link/object) through queue
+// run Python transaction (applied to link/object) in kernel's queue
 template<typename... Ts>
-auto pytr_through_queue(std::function< py::object(Ts...) > tr, bool launch_async) {
+auto adapt_py_tr(std::function< py::object(Ts...) > tr, bool launch_async) {
 	// If we know that calling side is going to wait for `tr` result (launch_async == false)
 	// then force running `tr` in anon queue if we're currently inside anoter transaction
 	return [

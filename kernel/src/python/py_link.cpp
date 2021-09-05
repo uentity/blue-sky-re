@@ -218,7 +218,7 @@ void py_bind_link(py::module& m) {
 
 		.def("data_node",
 			[](const link& self, link::process_dnode_cb f, bool hp) {
-				self.data_node(pipe_through_queue(std::move(f), launch_async), hp);
+				self.data_node(adapt_enqueue(std::move(f)), hp);
 			},
 			"f"_a, "high_priority"_a = false
 		)
@@ -232,7 +232,7 @@ void py_bind_link(py::module& m) {
 		.def("apply",
 			[](const link& L, py_link_transaction tr) {
 				// capture Py transaction with sahred_ptr while GIL is held
-				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				auto piped_tr = adapt_py_tr(std::move(tr), false);
 				// release GIL & exec transaction in kernel's queue = in another thread
 				const auto g = py::gil_scoped_release{};
 				return L.apply(std::move(piped_tr));
@@ -242,7 +242,7 @@ void py_bind_link(py::module& m) {
 
 		.def("apply",
 			[](const link& L, launch_async_t, py_link_transaction tr) {
-				L.apply(launch_async, pytr_through_queue(std::move(tr), true));
+				L.apply(launch_async, adapt_py_tr(std::move(tr), true));
 			},
 			"launch_async"_a, "tr"_a, "Send transaction `tr` to link's queue, return immediately (async)"
 		)
@@ -250,7 +250,7 @@ void py_bind_link(py::module& m) {
 		.def("data_apply",
 			[](const link& L, py_obj_transaction tr) {
 				// capture Py transaction with sahred_ptr while GIL is held
-				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				auto piped_tr = adapt_py_tr(std::move(tr), false);
 				// release GIL & exec transaction in kernel's queue = in another thread
 				const auto g = py::gil_scoped_release{};
 				return L.data_apply(std::move(piped_tr));
@@ -260,7 +260,7 @@ void py_bind_link(py::module& m) {
 
 		.def("data_apply",
 			[](const link& L, launch_async_t, py_obj_transaction tr) {
-				L.data_apply(launch_async, pytr_through_queue(std::move(tr), true));
+				L.data_apply(launch_async, adapt_py_tr(std::move(tr), true));
 			},
 			"launch_async"_a, "tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
@@ -269,7 +269,7 @@ void py_bind_link(py::module& m) {
 		.def("data_apply",
 			[](const link& L, py_obj_transaction tr, link::process_tr_cb f) {
 				L.data_apply(
-					pytr_through_queue(std::move(tr), true), pipe_through_queue(std::move(f), launch_async)
+					adapt_py_tr(std::move(tr), true), adapt_enqueue(std::move(f))
 				);
 			},
 			"tr"_a, "f"_a,
@@ -300,7 +300,7 @@ void py_bind_link(py::module& m) {
 
 		// events subscrition
 		.def("subscribe", [](const link& L, link::event_handler f, Event listen_to) {
-			return L.subscribe(pipe_through_queue(std::move(f), launch_async), listen_to);
+			return L.subscribe(adapt_enqueue(std::move(f)), listen_to);
 		}, "event_cb"_a, "events"_a = Event::All)
 
 		.def("unsubscribe", py::overload_cast<deep_t>(&link::unsubscribe, py::const_))

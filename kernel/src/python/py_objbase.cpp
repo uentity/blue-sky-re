@@ -40,7 +40,7 @@ void py_bind_objbase(py::module& m) {
 		.def("apply",
 			[](objbase& self, py_obj_transaction tr) {
 				// capture Py transaction with sahred_ptr while GIL is held
-				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				auto piped_tr = adapt_py_tr(std::move(tr), false);
 				// release GIL & exec transaction in kernel's queue = in another thread
 				const auto g = py::gil_scoped_release{};
 				return self.apply(std::move(piped_tr));
@@ -50,7 +50,7 @@ void py_bind_objbase(py::module& m) {
 		// callback into actor
 		.def("apply",
 			[](objbase& self, launch_async_t, py_obj_transaction tr) {
-				self.apply(launch_async, pytr_through_queue(std::move(tr), true));
+				self.apply(launch_async, adapt_py_tr(std::move(tr), true));
 			},
 			"launch_async"_a, "tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
@@ -58,7 +58,7 @@ void py_bind_objbase(py::module& m) {
 		.def("apply",
 			[](objbase& self, py_obj_transaction tr, objbase::process_tr_cb f) {
 				self.apply(
-					pytr_through_queue(std::move(tr), true), pipe_through_queue(std::move(f), launch_async)
+					adapt_py_tr(std::move(tr), true), adapt_enqueue(std::move(f))
 				);
 			},
 			"tr"_a, "f"_a,

@@ -61,14 +61,17 @@ struct BS_HIDDEN_API radio_subsyst {
 	// send exit message to all citizens & wait until they exit
 	auto kick_citizens() -> void;
 
-	// post transaction into kernel's queue
+	// eval transaction with blocking wait for result
 	auto enqueue(transaction tr, bool force_anon = false) -> tr_result;
+	// post transaction into kernel's queue
 	auto enqueue(launch_async_t, transaction tr) -> void;
 	// use `context.request().await()` to execute tr in queue
+	// 'blocking' actor wait for result
 	auto enqueue(caf::event_based_actor* context, transaction tr, bool force_anon = false)
 		-> caf::result<tr_result::box>;
-	auto stop_queue(bool wait_exit) -> void;
+	// check that this (calling side) thread is kernel's queue thread
 	auto is_queue_thread() const -> bool;
+	auto stop_queue(bool wait_exit) -> void;
 
 	// server actor management
 	auto toggle(bool on) -> error;

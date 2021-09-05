@@ -381,7 +381,7 @@ void py_bind_node(py::module& m) {
 
 		// events subscrition
 		.def("subscribe", [](const node& N, node::event_handler f, Event listen_to) {
-			return N.subscribe(pipe_through_queue(std::move(f), launch_async), listen_to);
+			return N.subscribe(adapt_enqueue(std::move(f)), listen_to);
 		}, "event_cb"_a, "events"_a = Event::All)
 
 		.def("unsubscribe", py::overload_cast<deep_t>(&node::unsubscribe, py::const_))
@@ -394,7 +394,7 @@ void py_bind_node(py::module& m) {
 		.def("apply",
 			[](const node& N, py_node_transaction tr) {
 				// capture Py transaction with sahred_ptr while GIL is held
-				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				auto piped_tr = adapt_py_tr(std::move(tr), false);
 				// release GIL & exec transaction in kernel's queue = in another thread
 				const auto g = py::gil_scoped_release{};
 				return N.apply(std::move(piped_tr));
@@ -404,7 +404,7 @@ void py_bind_node(py::module& m) {
 
 		.def("apply",
 			[](const node& N, launch_async_t, py_node_transaction tr) {
-				N.apply(launch_async, pytr_through_queue(std::move(tr), true));
+				N.apply(launch_async, adapt_py_tr(std::move(tr), true));
 			},
 			"launch_async"_a, "tr"_a, "Send transaction `tr` to node's queue, return immediately"
 		)
