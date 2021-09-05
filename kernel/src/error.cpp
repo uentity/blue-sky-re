@@ -110,7 +110,7 @@ std::error_code make_error_code(Error e) {
 		std::string message(int ec) const override {
 			switch(static_cast<Error>(ec)) {
 			case Error::TrEmptyTarget:
-				return "Transaction target is empty";
+				return "Transaction target is nil";
 
 			case Error::Happened:
 				return "runtime error";

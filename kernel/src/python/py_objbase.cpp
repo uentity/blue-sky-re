@@ -36,19 +36,29 @@ void py_bind_objbase(py::module& m) {
 		.def_property_readonly("id", &objbase::id)
 		.def_property_readonly("data_node", &objbase::data_node)
 		.def_property_readonly("info", &objbase::info)
-		// [NOTE] export only async overload, because otherwise Python will hang when moving
-		// callback into actor
+
 		.def("apply",
 			[](objbase& self, py_obj_transaction tr) {
-				self.apply(launch_async, pytr_through_queue(std::move(tr)));
+				// capture Py transaction with sahred_ptr while GIL is held
+				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				// release GIL & exec transaction in kernel's queue = in another thread
+				const auto g = py::gil_scoped_release{};
+				return self.apply(std::move(piped_tr));
 			},
-			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
+			"tr"_a, "Blocking execute `tr` in object's queue (sync)"
+		)
+		// callback into actor
+		.def("apply",
+			[](objbase& self, launch_async_t, py_obj_transaction tr) {
+				self.apply(launch_async, pytr_through_queue(std::move(tr), true));
+			},
+			"launch_async"_a, "tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
 
 		.def("apply",
 			[](objbase& self, py_obj_transaction tr, objbase::process_tr_cb f) {
 				self.apply(
-					pytr_through_queue(std::move(tr)), pipe_through_queue(std::move(f), launch_async)
+					pytr_through_queue(std::move(tr), true), pipe_through_queue(std::move(f), launch_async)
 				);
 			},
 			"tr"_a, "f"_a,

@@ -296,6 +296,8 @@ void py_bind_node(py::module& m) {
 	;
 	add_common_api(node_pyface);
 
+	using py_node_transaction = std::function< py::object(bare_node) >;
+
 	// append node-specific API
 	node_pyface
 		.def("__iter__", [](const node& N) {
@@ -390,10 +392,21 @@ void py_bind_node(py::module& m) {
 		}, "handler_id"_a)
 
 		.def("apply",
-			[](const node& N, std::function< py::object(bare_node) > tr) {
-				N.apply(launch_async, pytr_through_queue(std::move(tr)));
+			[](const node& N, py_node_transaction tr) {
+				// capture Py transaction with sahred_ptr while GIL is held
+				auto piped_tr = pytr_through_queue(std::move(tr), false);
+				// release GIL & exec transaction in kernel's queue = in another thread
+				const auto g = py::gil_scoped_release{};
+				return N.apply(std::move(piped_tr));
 			},
-			"tr"_a, "Send transaction `tr` to node's queue, return immediately"
+			"tr"_a, "Blocking execute `tr` (sync)"
+		)
+
+		.def("apply",
+			[](const node& N, launch_async_t, py_node_transaction tr) {
+				N.apply(launch_async, pytr_through_queue(std::move(tr), true));
+			},
+			"launch_async"_a, "tr"_a, "Send transaction `tr` to node's queue, return immediately"
 		)
 	;
 
