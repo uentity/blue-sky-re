@@ -84,6 +84,13 @@ struct ev_listener_actor : caf::event_based_actor {
 		KRADIO.release_citizen(this);
 	}
 
+	auto handle_event(Event ev, prop::propdict params) {
+		if(auto A = caf::actor_cast<caf::actor>(origin))
+			f(event{std::move(A), std::move(params), ev});
+		else
+			quit();
+	}
+
 private:
 	// temp storage for event handlers between ctor and make_behavior()
 	caf::behavior character;

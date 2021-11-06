@@ -15,7 +15,7 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 using event_handler = node::event_handler;
 
-static auto make_listener(const node& self, event_handler f, Event listen_to) {
+static auto make_listener(const node& origin, event_handler f, Event listen_to) {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<node>;
@@ -31,7 +31,7 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 			self->quit();
 	};
 
-	auto make_ev_character = [weak_root = node::weak_ptr(self), listen_to](baby_t* self) {
+	auto make_ev_character = [weak_root = node::weak_ptr(origin), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed)) {
 			const auto renamed_impl = [=](
@@ -171,7 +171,7 @@ static auto make_listener(const node& self, event_handler f, Event listen_to) {
 
 	// make shiny new subscriber actor and place into parent's room
 	return system().spawn<baby_t, caf::lazy_init>(
-		self.actor().address(), std::move(f), std::move(make_ev_character)
+		origin.actor().address(), std::move(f), std::move(make_ev_character)
 	);
 }
 
@@ -188,10 +188,9 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 auto node::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
 	auto baby = make_listener(*this, std::move(f), listen_to);
-	if(auto baby_id = node_impl::actorf<std::uint64_t>(*this, a_subscribe{}, std::move(baby)))
-		return *baby_id;
-	else
-		throw baby_id.error();
+	auto baby_id = baby.id();
+	caf::anon_send(pimpl()->actor(*this), a_subscribe{}, std::move(baby));
+	return baby_id;
 }
 
 auto node::unsubscribe(deep_t) const -> void {
