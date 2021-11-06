@@ -110,6 +110,22 @@ public:
 	virtual auto touch(tr_result tres = {}) -> void final;
 
 	///////////////////////////////////////////////////////////////////////////////
+	//  Events subscription management
+	//
+	using Event = tree::Event;
+	using event = tree::event;
+	using event_handler = std::function< void(event) >;
+
+	/// returns ID of suscriber that is required for unsubscribe
+	// [NOTE] non-const versus const in link/node due to actor startuo on first usage
+	auto subscribe(event_handler f, Event listen_to = Event::All) -> std::uint64_t;
+	auto subscribe(launch_async_t, event_handler f, Event listen_to = Event::All) -> std::uint64_t;
+
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
+	/// unsubscribe all self event handlers
+	auto unsubscribe() const -> void;
+
+	///////////////////////////////////////////////////////////////////////////////
 	//  Customization points for derived types
 	//
 	/// derived types must override this and return correct `type_descriptor`

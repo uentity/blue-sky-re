@@ -95,18 +95,6 @@ void py_bind_tree(py::module& m) {
 		.export_values()
 	;
 
-	bind_enum_with_ops<Event>(m, "Event")
-		.value("Nil", Event::Nil)
-		.value("LinkRenamed", Event::LinkRenamed)
-		.value("LinkStatusChanged", Event::LinkStatusChanged)
-		.value("LinkInserted", Event::LinkInserted)
-		.value("LinkErased", Event::LinkErased)
-		.value("LinkDeleted", Event::LinkDeleted)
-		.value("DataModified", Event::DataModified)
-		.value("DataNodeModified", Event::DataNodeModified)
-		.value("All", Event::All)
-	;
-
 	bind_enum_with_ops<InsertPolicy>(m, "InsertPolicy")
 		.value("AllowDupNames", InsertPolicy::AllowDupNames)
 		.value("DenyDupNames", InsertPolicy::DenyDupNames)
@@ -131,14 +119,6 @@ void py_bind_tree(py::module& m) {
 	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
 	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
 	bind_list<links_l>(m, "links_list", py::module_local(false));
-
-	// event
-	py::class_<event>(m, "event")
-		.def_readonly("params", &event::params)
-		.def_readonly("code", &event::code)
-		.def("origin_link", &event::origin_link, "If event source is link, return it")
-		.def("origin_node", &event::origin_node, "If event source is node, return it")
-	;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  link & node

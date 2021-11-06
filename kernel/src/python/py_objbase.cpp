@@ -69,6 +69,17 @@ void py_bind_objbase(py::module& m) {
 			&objbase::touch, "tres"_a = prop::propdict{},
 			"Send empty transaction to trigger `data modified` signal"
 		)
+
+		// events subscrition
+		.def("subscribe", [](objbase& obj, objbase::event_handler f, objbase::Event listen_to) {
+			return obj.subscribe(adapt_enqueue(std::move(f)), listen_to);
+		}, "event_cb"_a, "events"_a = objbase::Event::DataModified)
+
+		.def("unsubscribe", py::overload_cast<>(&objbase::unsubscribe, py::const_))
+		// static method
+		.def("unsubscribe", [](const py::object&, std::uint64_t handler_id) {
+			objbase::unsubscribe(handler_id);
+		}, "handler_id"_a)
 	;
 
 	// objnode

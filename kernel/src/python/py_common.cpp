@@ -9,6 +9,7 @@
 
 #include <bs/python/common.h>
 #include <bs/propdict.h>
+#include <bs/python/enum.h>
 #include <bs/python/property.h>
 #include <bs/python/map.h>
 #include "../kernel/python_subsyst_impl.h"
@@ -172,6 +173,28 @@ void py_bind_common(py::module& m) {
 	// deep tag
 	py::class_<deep_t>(m, "deep_t");
 	m.attr("deep") = deep;
+
+	using Event = tree::Event;
+	bind_enum_with_ops<Event>(m, "Event")
+		.value("Nil", Event::Nil)
+		.value("LinkRenamed", Event::LinkRenamed)
+		.value("LinkStatusChanged", Event::LinkStatusChanged)
+		.value("LinkInserted", Event::LinkInserted)
+		.value("LinkErased", Event::LinkErased)
+		.value("LinkDeleted", Event::LinkDeleted)
+		.value("DataModified", Event::DataModified)
+		.value("DataNodeModified", Event::DataNodeModified)
+		.value("All", Event::All)
+	;
+
+	// event
+	using event = tree::event;
+	py::class_<event>(m, "event")
+		.def_readonly("params", &event::params)
+		.def_readonly("code", &event::code)
+		.def("origin_link", &event::origin_link, "If event source is link, return it")
+		.def("origin_node", &event::origin_node, "If event source is node, return it")
+	;
 }
 
 NAMESPACE_END(python)

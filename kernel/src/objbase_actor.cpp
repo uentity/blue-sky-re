@@ -20,6 +20,8 @@
 
 #include <bs/serialize/object_formatter.h>
 
+#include "tree/ev_listener_actor.h"
+
 #include <caf/actor_ostream.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -48,6 +50,12 @@ return typed_behavior {
 
 	// get parent object
 	[=](a_impl) { return mama_.lock(); },
+
+	// subscribe events listener
+	[=](a_subscribe, caf::actor baby) {
+		// remember baby & ensure it's alive
+		return delegate(caf::actor_cast<tree::ev_listener_actor_type>(std::move(baby)), a_hi(), home_);
+	},
 
 	// execute transaction
 	[=](a_apply, const obj_transaction& otr) -> caf::result<tr_result::box> {
@@ -244,6 +252,68 @@ auto objbase::touch(tr_result tres) -> void {
 	caf::anon_send(actor(), a_apply(), obj_transaction{
 		[tres = std::move(tres)]() mutable { return std::move(tres); }
 	});
+}
+
+/*-----------------------------------------------------------------------------
+ *  objbase events
+ *-----------------------------------------------------------------------------*/
+using event_handler = objbase::event_handler;
+using Event = objbase::Event;
+
+static auto make_listener(objbase& origin, event_handler f, Event listen_to) {
+	using namespace kernel::radio;
+	using namespace allow_enumops;
+	using baby_t = tree::ev_listener_actor<objbase>;
+
+	auto make_ev_character = [listen_to](baby_t* self) {
+		auto res = caf::message_handler{};
+
+		if(enumval(listen_to & Event::DataModified))
+			res = res.or_else(
+				[=](a_ack, a_data, tr_result::box tres_box) {
+					auto params = prop::propdict{};
+					if(auto tres = tr_result{std::move(tres_box)})
+						params = extract_info(std::move(tres));
+					else
+						params["error"] = to_string(extract_err(std::move(tres)));
+					self->handle_event(Event::DataModified, std::move(params));
+				}
+			);
+
+		return res;
+	};
+
+	// make baby event handler actor
+	return system().spawn<baby_t, caf::lazy_init>(
+		origin.actor().address(), std::move(f), std::move(make_ev_character)
+	);
+}
+
+auto objbase::subscribe(event_handler f, Event listen_to) -> std::uint64_t {
+	// ensure it has started & properly initialized
+	// throw exception otherwise
+	if(auto res = actorf<std::uint64_t>(
+		objbase_actor::actor(*this), kernel::radio::timeout(false), a_subscribe_v,
+		make_listener(*this, std::move(f), listen_to)
+	))
+		return *res;
+	else
+		throw res.error();
+}
+
+auto objbase::subscribe(launch_async_t, event_handler f, Event listen_to) -> std::uint64_t {
+	auto baby = make_listener(*this, std::move(f), listen_to);
+	auto baby_id = baby.id();
+	caf::anon_send(objbase_actor::actor(*this), a_subscribe{}, std::move(baby));
+	return baby_id;
+}
+
+auto objbase::unsubscribe(std::uint64_t event_cb_id) -> void {
+	tree::engine::unsubscribe(event_cb_id);
+}
+
+auto objbase::unsubscribe() const -> void {
+	caf::anon_send(home(), a_bye{});
 }
 
 NAMESPACE_END(blue_sky)
