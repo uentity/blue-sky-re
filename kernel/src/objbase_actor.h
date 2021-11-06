@@ -26,6 +26,8 @@ public:
 	>;
 
 	using actor_type = objbase::actor_type::extend<
+		// return parent object this actor belongs to
+		caf::replies_to<a_impl>::with<sp_obj>,
 		// runs async transaction
 		caf::replies_to<a_ack, a_apply, obj_transaction>::with<tr_result::box>,
 		// invoke object save

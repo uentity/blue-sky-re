@@ -101,6 +101,7 @@ struct BS_API event {
 
 	auto origin_link() const -> link;
 	auto origin_node() const -> node;
+	auto origin_object() const -> sp_obj;
 };
 
 NAMESPACE_END(blue_sky::tree)

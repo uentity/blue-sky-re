@@ -46,6 +46,9 @@ return typed_behavior {
 	// get home group
 	[=](a_home) { return home_; },
 
+	// get parent object
+	[=](a_impl) { return mama_.lock(); },
+
 	// execute transaction
 	[=](a_apply, const obj_transaction& otr) -> caf::result<tr_result::box> {
 		// if transaction is async, go through additional request,

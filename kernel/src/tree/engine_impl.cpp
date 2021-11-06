@@ -60,6 +60,13 @@ auto event::origin_node() const -> node {
 		}).value_or(node::nil());
 }
 
+auto event::origin_object() const -> sp_obj {
+	if(origin_is_nil(origin))
+		return {};
+	else
+		return actorf<sp_obj>(origin, kradio::timeout(true), a_impl{}).value_or(nullptr);
+}
+
 /*-----------------------------------------------------------------------------
  *  engine_impl
  *-----------------------------------------------------------------------------*/
