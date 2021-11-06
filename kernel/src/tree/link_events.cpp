@@ -91,9 +91,8 @@ static auto make_listener(const link& self, event_handler f, Event listen_to) {
 auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	// ensure it has started & properly initialized
 	// throw exception otherwise
-	if(auto res = actorf<std::uint64_t>(
-		pimpl()->actor(*this), infinite, a_subscribe(),
-		make_listener(*this, std::move(f), listen_to)
+	if(auto res = link_impl::actorf<std::uint64_t>(
+		*this, a_subscribe_v, make_listener(*this, std::move(f), listen_to)
 	))
 		return *res;
 	else
@@ -102,12 +101,10 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 auto link::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
 	auto baby = make_listener(*this, std::move(f), listen_to);
-	auto baby_id = actorf<std::uint64_t>(
-		pimpl()->actor(*this), kernel::radio::timeout(), a_subscribe{}, std::move(baby)
-	);
-	if(!baby_id)
+	if(auto baby_id = link_impl::actorf<std::uint64_t>(*this, a_subscribe{}, std::move(baby)))
+		return *baby_id;
+	else
 		throw baby_id.error();
-	return *baby_id;
 }
 
 auto link::unsubscribe(deep_t) const -> void {

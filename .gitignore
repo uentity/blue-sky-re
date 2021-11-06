@@ -10,7 +10,7 @@ Win32
 x64
 Release
 Debug
-.vs
+.*
 *.py[co]
 *~
 /build

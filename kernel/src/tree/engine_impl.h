@@ -104,19 +104,21 @@ public:
 	}
 
 	/// make request to engine via tree item handle H
-	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
-	static auto actorf(const Handle& H, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>(
-			Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
-		);
+	/// `arg1` can be timeout or first component of message (default (not long) timeout is used then)
+	template<typename R, typename Handle, typename Arg1, typename... Args, typename = if_engine_handle<Handle>>
+	static auto actorf(const Handle& H, Arg1&& arg1, Args&&... args) {
+		if constexpr(std::is_same_v<meta::remove_cvref_t<Arg1>, timespan>)
+			return blue_sky::actorf<R>(
+				Handle::engine_impl::actor(H), arg1, std::forward<Args>(args)...
+			);
+		else
+			return blue_sky::actorf<R>(
+				Handle::engine_impl::actor(H), pimpl(H).timeout(false),
+				std::forward<Arg1>(arg1), std::forward<Args>(args)...
+			);
 	}
 
-	/// same as above, but substitute configured timeouts
-	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
-	static auto actorf(const Handle& H, Args&&... args) {
-		return actorf<R>(H, pimpl(H).timeout(false), std::forward<Args>(args)...);
-	}
-
+	/// same as above, but with long op timeout
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(long_op_t, const Handle& H, Args&&... args) {
 		return actorf<R>(H, pimpl(H).timeout(true), std::forward<Args>(args)...);

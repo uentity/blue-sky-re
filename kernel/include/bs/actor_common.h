@@ -179,10 +179,10 @@ auto actorf(const caf::scoped_actor& caller, const Actor& tgt, timespan timeout,
 
 /// constructs scoped actor inside from passed handle & timeout
 template<
-	typename R, typename Actor, typename T, typename... Args,
+	typename R, typename Actor, typename... Args,
 	typename = detail::if_actor_handle<Actor>
 >
-auto actorf(const Actor& tgt, T timeout, Args&&... args) {
+auto actorf(const Actor& tgt, timespan timeout, Args&&... args) {
 	return actorf<R>(
 		caf::scoped_actor{kernel::radio::system()}, tgt, timeout, std::forward<Args>(args)...
 	);
