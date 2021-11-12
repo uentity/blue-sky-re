@@ -107,6 +107,10 @@ auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
 	return res;
 }
 
+auto noop_mapper(link, link, event, caf::event_based_actor*) -> caf::result<link> {
+	return {};
+}
+
 NAMESPACE_END()
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -291,8 +295,14 @@ auto map_link_impl::refresh(map_link_actor* papa, event ev) -> caf::result<node_
 
 // default ctor installs noop mapping fn
 map_link_impl::map_link_impl() :
-	map_impl_base(true), mf_(noop_r<link>())
+	map_impl_base(true), mf_(noop_mapper)
 {}
+
+auto map_link_impl::has_target() const -> bool {
+	if(auto f = mf_.target<map_link::link_mapper_sgn*>())
+		return *f != noop_mapper;
+	return true;
+}
 
 auto map_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises

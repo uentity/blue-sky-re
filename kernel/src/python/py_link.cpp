@@ -458,7 +458,7 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("tag", &map_link::tag)
 		.def_property_readonly("input", &map_link::input)
 		.def_property_readonly("output", &map_link::output)
-		.def_property_readonly("has_target", [](const map_link& L) { return L.l_target() || L.n_target(); })
+		.def_property_readonly("has_target", &map_link::has_target)
 
 		.def(
 			"reset_settings", &map_link::reset_settings, "update_on"_a, "opts"_a,

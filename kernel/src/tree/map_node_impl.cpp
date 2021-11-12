@@ -59,12 +59,22 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 		return request_data_impl<node>(*papa, Req::DataNode, opts, std::move(invoke_mapper));
 }
 
+auto noop_mapper(node, node, event, caf::event_based_actor*) -> caf::result<void> {
+	return {};
+}
+
 NAMESPACE_END()
 
 // default ctor installs noop mapping fn
 map_node_impl::map_node_impl() :
-	map_impl_base(false), mf_(noop_r<caf::result<void>>())
+	map_impl_base(false), mf_(noop_mapper)
 {}
+
+auto map_node_impl::has_target() const -> bool {
+	if(auto f = mf_.target<map_link::node_mapper_sgn*>())
+		return *f != noop_mapper;
+	return true;
+}
 
 auto map_node_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises

@@ -109,11 +109,15 @@ auto map_link::tag() const -> uuid {
 }
 
 auto map_link::input() const -> node {
-	return ei::pimpl<map_impl_base>(*this).in_;
+	return ei::pimpl(*this).in_;
 }
 
 auto map_link::output() const -> node {
-	return ei::pimpl<map_impl_base>(*this).out_;
+	return ei::pimpl(*this).out_;
+}
+
+auto map_link::has_target() const -> bool {
+	return ei::pimpl(*this).has_target();
 }
 
 auto map_link::l_target() const -> const link_mapper_f* {

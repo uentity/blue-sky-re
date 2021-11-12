@@ -24,14 +24,17 @@ public:
 	using engine_impl = map_impl_base;
 
 	/// link -> link mapping functions
-	using link_mapper_f = std::function<caf::result<link>(
+	using link_mapper_sgn = caf::result<link>(
 		link /* source */, link /* existing dest */, event ev, caf::event_based_actor* /* worker */
-	)>;
+	);
+	using link_mapper_f = std::function<link_mapper_sgn>;
 	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */, event ev)>;
+
 	/// node -> node mapping functions
-	using node_mapper_f = std::function<caf::result<void>(
+	using node_mapper_sgn = caf::result<void>(
 		node /* source */, node /* existing dest */, event ev, caf::event_based_actor* /* worker */
-	)>;
+	);
+	using node_mapper_f = std::function<node_mapper_sgn>;
 	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */, event ev)>;
 
 	using mapper_f = std::variant<link_mapper_f, simple_link_mapper_f, node_mapper_f, simple_node_mapper_f>;
@@ -65,6 +68,7 @@ public:
 
 	auto l_target() const -> const link_mapper_f*;
 	auto n_target() const -> const node_mapper_f*;
+	auto has_target() const -> bool;
 
 	auto reset_settings(Event update_on, TreeOpts opts) -> void;
 };

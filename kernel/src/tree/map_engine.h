@@ -68,6 +68,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  map-specific API
 	//
+	virtual auto has_target() const -> bool = 0;
 	// update/erase single link
 	virtual auto update(map_link_actor* papa, link src_link, event ev) -> void = 0;
 	virtual auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void = 0;
@@ -96,6 +97,8 @@ public:
 	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
 		map_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
+
+	auto has_target() const -> bool override final;
 
 	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
@@ -130,6 +133,8 @@ public:
 	explicit map_node_impl(node_mapper_f mf, Args&&... args) :
 		map_impl_base(false, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
+
+	auto has_target() const -> bool override final;
 
 	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
