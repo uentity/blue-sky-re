@@ -49,8 +49,8 @@ auto adapt_py_tr(std::function< py::object(Ts...) > tr, bool launch_async) {
 		return KRADIO.enqueue(
 			papa,
 			// wrap tr in `optional` to implement early release
-			[tr = std::optional{std::move(tr)}, args = std::make_tuple(std::forward<Ts>(args)...)]() mutable {
-				auto r = std::apply(std::move(*tr), std::move(args));
+			[tr = std::optional{std::move(tr)}, args_ = std::make_tuple(std::forward<Ts>(args)...)]() mutable {
+				auto r = std::apply(std::move(*tr), std::move(args_));
 				tr.reset();
 				return r;
 			},
