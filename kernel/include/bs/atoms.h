@@ -17,6 +17,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(bs_atoms, first_custom_type_id)
 	CAF_ADD_ATOM(bs_atoms, blue_sky, a_unsafe)
 	CAF_ADD_ATOM(bs_atoms, blue_sky, a_long_op)
 	CAF_ADD_ATOM(bs_atoms, blue_sky, a_deep)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_quiet)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  generic BS API

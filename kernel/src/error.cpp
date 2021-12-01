@@ -242,7 +242,7 @@ error::box::box(int ec_, std::string domain_, std::string message_) noexcept
 ///////////////////////////////////////////////////////////////////////////////
 //  CAF errors passthrough
 //
-auto forward_caf_error(const caf::error& er, std::string_view msg) -> error {
+auto forward_caf_error(const caf::error& er, std::string_view msg, bool quiet) -> error {
 	// produce std::error_code from CAF error
 	static const auto caf_error_code = [](const caf::error& er) -> std::error_code {
 		struct caf_category : error::category<caf_category> {
@@ -259,7 +259,9 @@ auto forward_caf_error(const caf::error& er, std::string_view msg) -> error {
 		ermsg += " |> ";
 		ermsg += msg;
 	}
-	return { std::move(ermsg), caf_error_code(er) };
+	return quiet ?
+		error::quiet(std::move(ermsg), caf_error_code(er)) :
+		error{ std::move(ermsg), caf_error_code(er) };
 }
 
 NAMESPACE_END(blue_sky)

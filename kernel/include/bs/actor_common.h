@@ -23,11 +23,22 @@
 #include <caf/typed_behavior.hpp>
 #include <caf/is_actor_handle.hpp>
 #include <caf/send.hpp>
+#include <caf/detail/type_list.hpp>
 
 #include <optional>
 
 NAMESPACE_BEGIN(blue_sky)
+
+BS_API auto forward_caf_error(const caf::error& er, std::string_view msg = {}, bool quiet = false) -> error;
+
+/// tag value for high priority messages
+// [NOTE] disabled high prio messages due to some bugs in processing
+// [TODO] bring back after issue resolved
+//inline constexpr auto high_prio = caf::message_priority::high;
+inline constexpr auto high_prio = caf::message_priority::normal;
+
 NAMESPACE_BEGIN(detail)
+namespace cd = caf::detail;
 
 template<typename T>
 using if_actor_handle = std::enable_if_t<caf::is_actor_handle<T>::value>;
@@ -39,8 +50,14 @@ struct anon_sender {
 	};
 };
 
-template<typename T>
+// `TM` - eitther simply return type or a typelist <ret_t, a_quiet> for quiet CAF errors
+template<typename TM>
 struct afres_keeper {
+	// extract type to hold + detect if CAF errors must be quiet
+	using T = cd::tl_head_t<std::conditional_t<cd::is_type_list<TM>::value, TM, cd::type_list<TM>>>;
+	static constexpr bool quiet_err_flag = std::is_same_v<
+		cd::tl_back_t<std::conditional_t<cd::is_type_list<TM>::value, TM, cd::type_list<void>>>, a_quiet
+	>;
 	// calc value type returned from request
 	// `error` & `tr_result` are always transferred packed inside a box
 	template<typename U> struct box_of : identity<typename U::box> {};
@@ -59,8 +76,11 @@ struct afres_keeper {
 	// forward -> value.emplace()
 	template<typename U>
 	constexpr decltype(auto) emplace(U&& x) {
+		// if `x` is CAF error - translate it to bs::error
+		if constexpr(std::is_constructible_v<caf::error, U>)
+			return emplace(forward_caf_error(std::forward<U>(x), {}, quiet_err_flag));
 		// if `value` carries expected & `x` is error, mark it as unexpected value
-		if constexpr(
+		else if constexpr(
 			std::is_same_v<meta::remove_cvref_t<U>, error> &&
 			tl::detail::is_expected<typename P::value_type>::value
 		)
@@ -121,19 +141,12 @@ struct merge_with<T<SigsA...>, T<SigsB...>> {
 
 NAMESPACE_END(detail)
 
-/// calculate merge result of typed actors or typed behaviors
-/// in contrast to `extend_with<>` contains only unique entries
-template<typename T, typename U> using merge_with = typename detail::merge_with<T, U>::type;
-
-/// tag value for high priority messages
-// [NOTE] disabled high prio messages due to some bugs in processing
-// [TODO] bring back after issue resolved
-//inline constexpr auto high_prio = caf::message_priority::high;
-inline constexpr auto high_prio = caf::message_priority::normal;
-
-BS_API auto forward_caf_error(const caf::error& er, std::string_view msg = {}) -> error;
+/// Tag type for wrapping wanted result type that signals to not print CAF errors
+template<typename R>
+using with_quiet_err = caf::detail::type_list<R, a_quiet>;
 
 /// blocking invoke actor & return response like a function
+// `R` - eitther simply return type or a typelist <a_quiet, ret_t> for quiet CAF errors
 template<typename R, typename Actor, typename... Args>
 auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 	// setup placeholder for request result
@@ -154,7 +167,7 @@ auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 			res.emplace(std::move(*x));
 	}
 	else // caf err passtrough
-		res.emplace(forward_caf_error(x.error()));
+		res.emplace(x.error());
 
 	return res.get();
 }
@@ -171,7 +184,7 @@ auto actorf(const caf::scoped_actor& caller, const Actor& tgt, timespan timeout,
 	caller->request(tgt, timeout, std::forward<Args>(args)...)
 	.receive(
 		[&](R_& value) { res.emplace(std::move(value)); },
-		[&](const caf::error& er) { res.emplace(forward_caf_error(er)); }
+		[&](const caf::error& er) { res.emplace(er); }
 	);
 
 	return res.get();
@@ -202,7 +215,7 @@ auto actorf(caf::behavior& bhv, Args&&... args) {
 
 	// setup value extracter from resulting message
 	auto extracter = caf::message_handler{
-		[&](const caf::error& er) { res.emplace(forward_caf_error(er)); }
+		[&](const caf::error& er) { res.emplace(er); }
 	};
 	if constexpr(!std::is_same_v<R, void>) {
 		using R_ = typename decltype(res)::R;
@@ -218,7 +231,7 @@ auto actorf(caf::behavior& bhv, Args&&... args) {
 		extracter_bhv(*req_res);
 	}
 	else // if no answer returned => no match was found
-		res.emplace(forward_caf_error(caf::sec::unexpected_message));
+		res.emplace(caf::sec::unexpected_message);
 
 	if constexpr(!std::is_same_v<R, void>) return std::move(res.get());
 }
@@ -288,6 +301,10 @@ auto anon_request_result(Actor A, timespan timeout, bool high_priority, F f, Arg
 		));
 	});
 }
+
+/// calculate merge result of typed actors or typed behaviors
+/// in contrast to `extend_with<>` contains only unique entries
+template<typename T, typename U> using merge_with = typename detail::merge_with<T, U>::type;
 
 /// @brief models 'or_else' for typed behaviors - make unified behavior from `first` and `second`
 template<typename... SigsA, typename... SigsB>
