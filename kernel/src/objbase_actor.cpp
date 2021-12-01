@@ -36,6 +36,19 @@ objbase_actor::objbase_actor(caf::actor_config& cfg, sp_obj mama) :
 {
 	// exit after kernel
 	KRADIO.register_citizen(this);
+
+	// prevent termination in case some errors happens
+	set_error_handler([this](caf::error& er) {
+		switch(static_cast<caf::sec>(er.code())) {
+		case caf::sec::unexpected_message :
+			break;
+		default:
+			default_error_handler(this, er);
+		}
+	});
+
+	// completely ignore unexpected messages without error backpropagation
+	set_default_handler(noop_r<caf::message>());
 }
 
 auto objbase_actor::name() const -> const char* { return "objbase actor"; }
@@ -49,7 +62,11 @@ return typed_behavior {
 	[=](a_home) { return home_; },
 
 	// get parent object
-	[=](a_impl) { return mama_.lock(); },
+	[=](a_data, bool) -> tree::obj_or_errbox {
+		if(auto mama = mama_.lock())
+			return mama;
+		return unexpected_err_quiet(tree::Error::EmptyData);
+	},
 
 	// subscribe events listener
 	[=](a_subscribe, caf::actor baby) {

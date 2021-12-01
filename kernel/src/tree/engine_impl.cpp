@@ -40,7 +40,7 @@ auto event::origin_link() const -> link {
 	if(origin_is_nil(origin))
 		return link{};
 	else
-		return actorf<engine::sp_engine_impl>(origin, kradio::timeout(true), a_impl{})
+		return actorf<with_quiet_err<engine::sp_engine_impl>>(origin, kradio::timeout(true), a_impl{})
 		.map([](auto&& eimpl) {
 			if(eimpl->type_id() != node_impl::type_id_())
 				return std::static_pointer_cast<link_impl>(eimpl)->super_engine();
@@ -52,7 +52,7 @@ auto event::origin_node() const -> node {
 	if(origin_is_nil(origin))
 		return node::nil();
 	else
-		return actorf<engine::sp_engine_impl>(origin, kradio::timeout(true), a_impl{})
+		return actorf<with_quiet_err<engine::sp_engine_impl>>(origin, kradio::timeout(true), a_impl{})
 		.map([](auto&& eimpl) {
 			if(eimpl->type_id() == node_impl::type_id_())
 				return std::static_pointer_cast<node_impl>(eimpl)->super_engine();
@@ -64,7 +64,9 @@ auto event::origin_object() const -> sp_obj {
 	if(origin_is_nil(origin))
 		return {};
 	else
-		return actorf<sp_obj>(origin, kradio::timeout(true), a_impl{}).value_or(nullptr);
+		return actorf<with_quiet_err<obj_or_errbox>>(
+			origin, kradio::timeout(true), a_data_v, false
+		).value_or(nullptr);
 }
 
 /*-----------------------------------------------------------------------------

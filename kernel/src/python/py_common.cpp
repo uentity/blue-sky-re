@@ -194,6 +194,7 @@ void py_bind_common(py::module& m) {
 		.def_readonly("code", &event::code)
 		.def("origin_link", &event::origin_link, "If event source is link, return it")
 		.def("origin_node", &event::origin_node, "If event source is node, return it")
+		.def("origin_object", &event::origin_object, "If event source is object, return it")
 	;
 }
 

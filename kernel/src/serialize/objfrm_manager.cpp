@@ -71,7 +71,7 @@ return {
 	},
 
 	[=](a_ack) -> caf::result<errb_vector> {
-		boxed_errs_ = make_response_promise<errb_vector>();
+		boxed_errs_ = make_response_promise();
 		session_ack();
 		return boxed_errs_;
 	}

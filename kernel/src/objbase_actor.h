@@ -27,7 +27,8 @@ public:
 
 	using actor_type = objbase::actor_type::extend<
 		// return parent object this actor belongs to
-		caf::replies_to<a_impl>::with<sp_obj>,
+		// [NOTE] request API is intentionally compatible with `link`
+		caf::replies_to<a_data, bool>::with<tree::obj_or_errbox>,
 		// subscribe to events
 		caf::replies_to<a_subscribe, caf::actor>::with<std::uint64_t>,
 		// runs async transaction
