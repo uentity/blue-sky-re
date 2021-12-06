@@ -19,20 +19,34 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
 	// safely invoke mapper and return output node on success
 	auto invoke_mapper =
-		[mama = papa->spimpl<map_node_impl>(), mf = mama->mf_, ev = std::move(ev)]
+		[papa_addr = papa->address(), mama = papa->spimpl<map_node_impl>(), mf = mama->mf_, ev = std::move(ev)]
 		(caf::event_based_actor* worker) mutable -> caf::result<node_or_errbox> {
 			auto invoke_res = worker->make_response_promise<node_or_errbox>();
 
+			// patch behavior of worker actor
 			using res_t = caf::result<void>;
 			worker->become(caf::message_handler{
+				// do work on a_mlnk_fresh message
 				[=, mf = std::move(mf), ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
 					auto res = std::optional<res_t>{};
 					if(auto er = error::eval_safe([&] {
 						res = mf(mama->in_, mama->out_, std::move(ev), worker);
+						// early release captured mapper
+						mf = nullptr;
 					})) {
 						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
 					}
 					return res ? std::move(*res) : caf::error();
+				},
+
+				// support delayed eval from status waiters queue
+				[=](a_apply, const node_or_errbox&) {
+					// if map link actor is alive, send it a message like event has just happened
+					if(auto papa = caf::actor_cast<map_link_impl::actor_type>(papa_addr))
+						worker->send(papa, a_ack_v, a_apply_v, nil_uid, std::move(ev));
+					// quit explicitly to early terminate worker state
+					// which contain node_or_err response promise that nobody interest in
+					worker->quit();
 				}
 			}.or_else(worker->current_behavior()));
 

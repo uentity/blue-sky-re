@@ -17,7 +17,6 @@ NAMESPACE_BEGIN()
 
 using lmapper_res_t = std::pair< link /* mapping result */, link /* dest */ >;
 
-// modify worker actor behavior s.t. it invokes link mapper on `a_ack` message
 template<typename F>
 auto make_lmapper_actor(
 	map_link_impl::sp_map_link_impl mama, link src_link, event ev, F res_processor
@@ -46,6 +45,8 @@ auto make_lmapper_actor(
 				}
 				else
 					res = link{};
+				// early release captured mapper
+				mf = nullptr;
 				return *res;
 			},
 
