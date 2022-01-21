@@ -9,49 +9,14 @@
 
 #include "link_actor.h"
 #include "../kernel/radio_subsyst.h"
+#include "request_traits.h"
 
 #include <bs/detail/enumops.h>
 
+#include <variant>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN(detail)
-
-template<typename R, typename F>
-struct request_traits {
-	// helper that passes pointer to bg actor making a request if functor needs it
-	static constexpr auto invoke_f_request(F& f, caf::event_based_actor* origin) {
-		if constexpr(std::is_invocable_v<F, caf::event_based_actor*>)
-			return f(origin);
-		else
-			return f();
-	};
-
-	using f_ret_t = decltype( invoke_f_request(std::declval<F&>(), std::declval<caf::event_based_actor*>()) );
-	static constexpr bool can_invoke_inplace = tl::detail::is_expected<f_ret_t>::value;
-
-	// deduce request result type (must be result_or_errbox<R>)
-	using R_deduced = std::conditional_t<std::is_same_v<R, void>, f_ret_t, result_or_errbox<R>>;
-	static_assert(tl::detail::is_expected<R_deduced>::value);
-	// assume request result is `result_or_errbox<R>`
-	using res_t = result_or_errbox<typename R_deduced::value_type>;
-	// value type that worker actor returns (always transfers error in a box)
-	using worker_ret_t = std::conditional_t<can_invoke_inplace, res_t, f_ret_t>;
-	// type of extra result processing functor
-	using custom_rp_f = std::function< void(res_t) >;
-	// worker actor iface
-	using actor_type = caf::typed_actor<
-		typename caf::replies_to<a_ack>::template with<res_t>,
-		typename caf::replies_to<a_ack, custom_rp_f>::template with<res_t>
-	>;
-
-	template<typename U, typename V>
-	static auto chain_rp(U base_rp, V extra_rp) {
-		return [base_rp = std::move(base_rp), extra_rp = std::move(extra_rp)](res_t obj) mutable {
-			error::eval_safe([&] { base_rp(obj); });
-			if constexpr(!std::is_same_v<V, std::nullopt_t>)
-				error::eval_safe([&] { extra_rp(std::move(obj)); });
-		};
-	};
-};
 
 // `f_request` must return `result_or_errbox<R>`, `R` can be specified explicitly or auto-deduced.
 // Otherwise matching is not guranteed if work is started in standalone actor.
@@ -101,7 +66,9 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 			// install behavior
 			return {
 				// invoke result processor on delivered result
-				[rp](a_apply, res_t res) mutable { rp(std::move(res)); },
+				[rp](a_apply, res_t res) mutable {
+					rp(std::move(res));
+				},
 
 				// `a_ack` simply returns result promise
 				[self](a_ack) { return self->state.get(self); },
@@ -111,7 +78,7 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 					self->become(caf::message_handler{
 						[rp = rtraits::chain_rp(std::move(rp), std::move(extra_rp))](a_apply, res_t res)
 						mutable {
-							rp(std::move(res));
+							rtraits::invoke_rp(rp, std::move(res), false);
 						}
 					}.or_else(self->current_behavior()));
 
@@ -145,7 +112,8 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 			auto handle_ack = [self, rp = std::move(rp), f = std::move(f)](auto extra_rp) mutable {
 				res_t res = rtraits::invoke_f_request(f, self);
 				// update status inplace
-				rtraits::chain_rp(rp, std::move(extra_rp))(res);
+				auto full_rp = rtraits::chain_rp(rp, std::move(extra_rp));
+				rtraits::invoke_rp(full_rp, res, true);
 				return res;
 			};
 
@@ -163,9 +131,11 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 		else {
 			// helper to generate handler for `a_ack` message
 			auto handle_ack = [self, rp = std::move(rp)](auto extra_rp) mutable -> caf::result<res_t> {
-				// launch work
+				// launch work then process result
 				self->request(caf::actor_cast<caf::actor>(self), caf::infinite, a_apply())
-				.then(rtraits::chain_rp(rp, std::move(extra_rp)));
+				.then([full_rp = rtraits::chain_rp(rp, std::move(extra_rp))](res_t obj) mutable {
+					rtraits::invoke_rp(full_rp, std::move(obj), true);
+				});
 				// return result promise
 				return self->state.get(self);
 			};
@@ -298,7 +268,7 @@ auto request_data_impl(link_actor& LA, Req req, ReqOpts opts, F f_request, C... 
 	else {
 		auto res = process_err(rworker.error());
 		if constexpr(sizeof...(C) > 0)
-			(res_processor(std::move(res)), ...);
+			(rtraits::invoke_rp(res_processor, std::move(res), false), ...);
 		else
 			return caf_res_t{ std::move(res) };
 	}

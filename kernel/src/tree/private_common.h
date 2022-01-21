@@ -10,6 +10,8 @@
 #include <bs/tree/engine.h>
 #include <bs/tree/type_caf_id.h>
 
+#include "request_traits.h"
+
 #include <caf/typed_actor.hpp>
 
 #include <thread>
@@ -66,6 +68,9 @@ CAF_BEGIN_TYPE_ID_BLOCK(bs_private, blue_sky::detail::bs_private_cid_begin)
 	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::link_impl>))
 	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::node_impl>))
 	CAF_ADD_TYPE_ID(bs_private, (std::thread::id))
+
+	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::detail::request_traits<blue_sky::sp_obj, blue_sky::noop_t>::custom_rp_f))
+	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::detail::request_traits<blue_sky::tree::node, blue_sky::noop_t>::custom_rp_f))
 
 CAF_END_TYPE_ID_BLOCK(bs_private)
 
