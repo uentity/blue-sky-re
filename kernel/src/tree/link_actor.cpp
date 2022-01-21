@@ -25,7 +25,7 @@ using namespace kernel::radio;
 using namespace std::chrono_literals;
 
 [[maybe_unused]] auto adbg_impl(caf::actor_ostream out, const link_impl& L) -> caf::actor_ostream {
-	out << "[L:" << L.type_id() << "] [" << to_string(L.id_) << "] [" << L.name_ << "]: ";
+	out << "[L:" << std::string(L.type_id()) << "] [" << to_string(L.id_) << "] [" << L.name_ << "]: ";
 	return out;
 }
 

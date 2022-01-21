@@ -19,7 +19,7 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
 	// safely invoke mapper and return output node on success
 	auto invoke_mapper =
-		[papa_addr = papa->address(), mama = papa->spimpl<map_node_impl>(), mf = mama->mf_, ev = std::move(ev)]
+		[mama = papa->spimpl<map_node_impl>(), mf = mama->mf_, ev = std::move(ev)]
 		(caf::event_based_actor* worker) mutable -> caf::result<node_or_errbox> {
 			auto invoke_res = worker->make_response_promise<node_or_errbox>();
 
@@ -37,16 +37,6 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
 					}
 					return res ? std::move(*res) : caf::error();
-				},
-
-				// support delayed eval from status waiters queue
-				[=](a_apply, const node_or_errbox&) {
-					// if map link actor is alive, send it a message like event has just happened
-					if(auto papa = caf::actor_cast<map_link_impl::actor_type>(papa_addr))
-						worker->send(papa, a_ack_v, a_apply_v, nil_uid, std::move(ev));
-					// quit explicitly to early terminate worker state
-					// which contain node_or_err response promise that nobody interest in
-					worker->quit();
 				}
 			}.or_else(worker->current_behavior()));
 
@@ -63,11 +53,16 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 		opts |= ReqOpts::TrackWorkers;
 
 	if constexpr(DiscardResult) {
-		// trigger async request by sending `a_ack` message to worker actor
-		request_impl<node>(*papa, Req::DataNode, opts, std::move(invoke_mapper))
-		.map([&](auto&& rworker) {
-			papa->send(rworker, a_ack());
-		});
+		request_data_impl<node>(
+			*papa, Req::DataNode, opts, std::move(invoke_mapper),
+			[=, papa_addr = papa->address()](const node_or_errbox&, bool after_request) {
+				// if map link actor is alive, send it a message like event has just happened
+				if(!after_request) {
+					if(auto papa = caf::actor_cast<map_link_impl::actor_type>(papa_addr))
+						caf::anon_send(papa, a_ack_v, a_apply_v, nil_uid, std::move(ev));
+				}
+			}
+		);
 	}
 	else
 		return request_data_impl<node>(*papa, Req::DataNode, opts, std::move(invoke_mapper));
