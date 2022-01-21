@@ -12,7 +12,6 @@
 #include <bs/log.h>
 
 #include <fmt/format.h>
-#include <fmt/locale.h>
 #include <fmt/ostream.h>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
