@@ -17,6 +17,8 @@
 
 #include <caf/typed_event_based_actor.hpp>
 
+#include <algorithm>
+
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
@@ -214,6 +216,7 @@ auto node_actor::insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t
 		);
 	};
 
+	std::reverse(Ls.begin(), Ls.end());
 	insert_many(insert_many, std::move(Ls), 0);
 	return res;
 }
