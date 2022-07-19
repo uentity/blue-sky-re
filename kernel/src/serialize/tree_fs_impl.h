@@ -24,16 +24,6 @@
 #include <list>
 #include <unordered_set>
 
-// allow hashing path objects
-namespace std {
-
-template<> struct hash<std::filesystem::path> {
-	auto operator()(const std::filesystem::path& p) const {
-		return std::filesystem::hash_value(p);
-	}
-};
-
-} // eof namespace std
 
 NAMESPACE_BEGIN(blue_sky::detail)
 namespace fs = std::filesystem;
