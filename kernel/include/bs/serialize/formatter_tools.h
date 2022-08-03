@@ -27,22 +27,26 @@ inline auto install_bin_formatter(bool store_node = false, bool force = false) {
 	const auto& td = T::bs_type();
 	if(!force && formatter_installed(td.name, blue_sky::detail::bin_fmt_name)) return false;
 
-	auto bin_saver = [](const objbase& obj, std::string obj_fname, std::string_view) -> error {
+	auto bin_saver = [](object_formatter& self, const objbase& obj, std::string obj_fname, std::string_view) -> error {
 		auto objf = std::ofstream{obj_fname, std::ios::out | std::ios::trunc | std::ios::binary};
-		if(!objf) return {fmt::format(
+		if(!objf) return fmt::format(
 			"Cannot open file '{}' for writing '{}' with ID = {}", obj_fname, obj.type_id(), obj.id()
-		)};
+		);
 		cereal::PortableBinaryOutputArchive binar(objf);
+		self.bind_archive(&binar);
+		auto finally = detail::scope_guard{[&] { self.unbind_archive(&binar); }};
 		binar(static_cast< std::add_lvalue_reference_t<const T> >(obj));
 		return perfect;
 	};
 
-	auto bin_loader = [](objbase& obj, std::string obj_fname, std::string_view) -> error {
+	auto bin_loader = [](object_formatter& self, objbase& obj, std::string obj_fname, std::string_view) -> error {
 		auto objf = std::ifstream{obj_fname, std::ios::in | std::ios::binary};
-		if(!objf) return {fmt::format(
+		if(!objf) return fmt::format(
 			"Cannot open file '{}' for reading '{}'", obj_fname, obj.type_id()
-		)};
+		);
 		cereal::PortableBinaryInputArchive binar(objf);
+		self.bind_archive(&binar);
+		auto finally = detail::scope_guard{[&] { self.unbind_archive(&binar); }};
 		binar(static_cast< std::add_lvalue_reference_t<T> >(obj));
 		return perfect;
 	};
@@ -74,9 +78,10 @@ public:
 		"Custom node serialization switch must be the same for both Input and Output archives"
 	);
 
+	// [TODO] fix unused code below
 	template<typename Saver, typename Loader>
 	static auto install_formatter(
-		std::string fmt_name, Saver&& saver, Loader&& loader, bool make_active = true
+		std::string fmt_name, Saver&& saver, Loader&& loader
 	) {
 		// scan saver & loader signature for compatibility
 		static_assert(
@@ -103,23 +108,6 @@ public:
 		return install_formatter(
 			type::bs_type(), fmt_name, { std::move(saver_adapter), std::move(loader_adapter) }
 		);
-	}
-
-	static auto get_active_formatter() -> object_formatter& {
-		if(auto pfmt = get_active_formatter(type::bs_type().name); pfmt)
-			return pfmt->first;
-		else {
-			install_bin_formatter<type>();
-			return get_active_formatter();
-		}
-	}
-
-	static auto get_active_saver() -> object_saver_fn& {
-		return get_active_formatter().first;
-	}
-
-	static auto get_active_loader() -> object_loader_fn& {
-		return get_active_formatter().second;
 	}
 };
 

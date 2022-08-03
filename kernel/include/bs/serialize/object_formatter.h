@@ -15,12 +15,14 @@ NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  formatters manipulation API
  *-----------------------------------------------------------------------------*/
+struct object_formatter;
+
 using object_saver_fn = std::function<
-	error (const objbase& obj, std::string obj_fname, std::string_view fmt_name)
+	error (object_formatter&, const objbase& obj, std::string obj_fname, std::string_view fmt_name)
 >;
 
 using object_loader_fn = std::function<
-	error (objbase& obj, std::string obj_fname, std::string_view fmt_name)
+	error (object_formatter&, objbase& obj, std::string obj_fname, std::string_view fmt_name)
 >;
 
 struct BS_API object_formatter : private std::pair<object_saver_fn, object_loader_fn> {
@@ -33,8 +35,13 @@ struct BS_API object_formatter : private std::pair<object_saver_fn, object_loade
 		std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node = false
 	);
 
-	auto save(const objbase& obj, std::string obj_fname) const noexcept -> error;
-	auto load(objbase& obj, std::string obj_fname) const noexcept -> error;
+	auto save(const objbase& obj, std::string obj_fname) noexcept -> error;
+	auto load(objbase& obj, std::string obj_fname) noexcept -> error;
+
+	auto bind_archive(void* archive) const -> void;
+	auto unbind_archive(void* archive) const -> void;
+	auto unbind_archive() const -> void;
+	auto is_archive_binded(void* archive) const -> bool;
 
 	template<typename, typename> friend struct formatter_tools;
 };
@@ -47,7 +54,7 @@ BS_API auto formatter_installed(std::string_view obj_type_id, std::string_view f
 BS_API auto list_installed_formatters(std::string_view obj_type_id) -> std::vector<std::string>;
 
 BS_API auto get_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> object_formatter*;
-BS_API auto get_obj_formatter(const objbase* obj) -> object_formatter*;
+BS_API auto get_obj_formatter(const objbase* obj) -> const object_formatter*;
 
 NAMESPACE_BEGIN(detail)
 

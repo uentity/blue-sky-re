@@ -11,6 +11,7 @@
 #include <bs/uuid.h>
 
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <mutex>
 
@@ -26,11 +27,14 @@ struct fmaster {
 	using fmt_storage_t = std::map< std::string_view, std::set<object_formatter, std::less<>>, std::less<> >;
 	fmt_storage_t fmt_storage;
 
-	using registry_t = std::map<const objbase*, std::string_view>;
+	using registry_t = std::unordered_map<const objbase*, const object_formatter*>;
 	registry_t registry;
 
+	using archive_registry_t = std::unordered_multimap<const object_formatter*, void*>;
+	archive_registry_t archive_registry;
+
 	// sync access to data above
-	std::mutex fmt_guard, reg_guard;
+	std::mutex fmt_guard, reg_guard, arch_reg_guard;
 
 	fmaster() {}
 	fmaster(const fmaster& rhs) : fmt_storage(rhs.fmt_storage) {}
@@ -97,30 +101,52 @@ struct fmaster {
 		return nullptr;
 	}
 
-	auto register_formatter(const objbase& obj, std::string_view fmt_name) -> bool {
-		if(auto frm = get_formatter(obj.bs_resolve_type().name, fmt_name)) {
-			auto solo = std::lock_guard{ reg_guard };
-			registry[&obj] = frm->name;
-			return true;
-		}
-		return false;
-	}
-
-	auto deregister_formatter(const objbase& obj) -> bool {
+	auto register_formatter(const objbase& obj, const object_formatter* obj_fmt) -> void {
 		auto solo = std::lock_guard{ reg_guard };
-		if(auto r = registry.find(&obj); r != registry.end()) {
-			registry.erase(r);
-			return true;
-		}
-		return false;
+		registry[&obj] = obj_fmt;
 	}
 
-	auto get_obj_formatter(const objbase* obj) -> object_formatter* {
+	auto deregister_formatter(const objbase& obj) -> void {
+		auto solo = std::lock_guard{ reg_guard };
+		registry.erase(&obj);
+	}
+
+	auto get_obj_formatter(const objbase* obj) -> const object_formatter* {
 		auto solo = std::lock_guard{ reg_guard };
 		if(auto r = registry.find(obj); r != registry.end())
-			return get_formatter(obj->bs_resolve_type().name, r->second);
+			return r->second;
 		return nullptr;
 	}
+
+	auto register_archive(const object_formatter* frm, void* archive) -> void {
+		auto solo = std::lock_guard{ arch_reg_guard };
+		archive_registry.emplace(frm, archive);
+	}
+
+	auto deregister_archive(const object_formatter* frm) -> void {
+		auto solo = std::lock_guard{ arch_reg_guard };
+		archive_registry.erase(frm);
+	}
+
+	auto deregister_archive(const object_formatter* frm, void* archive) -> void {
+		auto solo = std::lock_guard{ arch_reg_guard };
+		for(auto [a, b] = archive_registry.equal_range(frm); a != b; ++a) {
+			if(a->second == archive) {
+				archive_registry.erase(a);
+				break;
+			}
+		}
+	}
+
+	auto contains_archive(const object_formatter* frm, void* archive) -> bool {
+		auto solo = std::lock_guard{ arch_reg_guard };
+		for(auto [a, b] = archive_registry.equal_range(frm); a != b; ++a) {
+			if(a->second == archive)
+				return true;
+		}
+		return false;
+	}
+
 };
 
 NAMESPACE_END()
@@ -150,7 +176,7 @@ auto get_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> o
 	return FM.get_formatter(obj_type_id, fmt_name);
 }
 
-auto get_obj_formatter(const objbase* obj) -> object_formatter* {
+auto get_obj_formatter(const objbase* obj) -> const object_formatter* {
 	return FM.get_obj_formatter(obj);
 }
 
@@ -174,20 +200,36 @@ auto operator<(std::string_view lhs, const object_formatter& rhs) {
 	return lhs < rhs.name;
 }
 
-auto object_formatter::save(const objbase& obj, std::string obj_fname) const noexcept -> error {
+auto object_formatter::save(const objbase& obj, std::string obj_fname) noexcept -> error {
 	const auto finally = scope_guard{[&] { error::eval_safe([&] { FM.deregister_formatter(obj); }); }};
 	return error::eval_safe([&] {
-		FM.register_formatter(obj, name);
-		first(obj, std::move(obj_fname), name);
+		FM.register_formatter(obj, this);
+		first(*this, obj, std::move(obj_fname), name);
 	});
 }
 
-auto object_formatter::load(objbase& obj, std::string obj_fname) const noexcept -> error {
+auto object_formatter::load(objbase& obj, std::string obj_fname) noexcept -> error {
 	const auto finally = scope_guard{[&] { error::eval_safe([&] { FM.deregister_formatter(obj); }); }};
 	return error::eval_safe([&] {
-		FM.register_formatter(obj, name);
-		second(obj, std::move(obj_fname), name);
+		FM.register_formatter(obj, this);
+		second(*this, obj, std::move(obj_fname), name);
 	});
+}
+
+auto object_formatter::bind_archive(void* archive) const -> void {
+	FM.register_archive(this, archive);
+}
+
+auto object_formatter::unbind_archive(void* archive) const -> void {
+	FM.deregister_archive(this, archive);
+}
+
+auto object_formatter::unbind_archive() const -> void {
+	FM.deregister_archive(this);
+}
+
+auto object_formatter::is_archive_binded(void* archive) const -> bool {
+	return FM.contains_archive(this, archive);
 }
 
 NAMESPACE_END(blue_sky)
