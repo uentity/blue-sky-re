@@ -97,31 +97,29 @@ struct tr_result : std::variant<prop::propdict, error> {
 
 	// implement map (like in `expected`)
 	template<typename F>
-	decltype(auto) map(F&& f) const {
-		if(auto p = std::get_if<0>(this))
-			return tr_result(f(*p));
-		return *this;
-	}
+	auto map(F&& f) const { return do_map<0>(this, std::forward<F>(f)); }
 
 	template<typename F>
-	decltype(auto) map(F&& f) {
-		if(auto p = std::get_if<0>(this))
-			return tr_result(f(*p));
-		return *this;
-	}
+	auto map(F&& f) { return do_map<0>(this, std::forward<F>(f)); }
 
 	template<typename F>
-	decltype(auto) map_error(F&& f) const {
-		if(auto e = std::get_if<1>(this))
-			return tr_result(f(*e));
-		return *this;
-	}
+	auto map_error(F&& f) const { return do_map<1>(this, std::forward<F>(f)); }
 
 	template<typename F>
-	decltype(auto) map_error(F&& f) {
-		if(auto e = std::get_if<1>(this))
-			return tr_result(f(*e));
-		return *this;
+	auto map_error(F&& f) { return do_map<1>(this, std::forward<F>(f)); }
+
+private:
+	template<std::size_t I, typename Self, typename F>
+	static constexpr auto do_map(Self self, F&& f) {
+		if(auto p = std::get_if<I>(self)) {
+			if constexpr(std::is_void_v<decltype( f(*p) )>) {
+				f(*p);
+				return tr_result{perfect};
+			}
+			else
+				return tr_result(f(*p));
+		}
+		return *self;
 	}
 };
 
