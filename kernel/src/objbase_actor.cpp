@@ -229,12 +229,15 @@ objbase::~objbase() {
 		caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
 }
 
-auto objbase::raw_actor() -> const caf::actor& {
+auto objbase::raw_actor() const -> const caf::actor& {
 	// engine must be initialized only once
 	std::call_once(einit_flag_, [&] {
 		// [NOTE] init may be called after move constructor, hence check if actor is initialized
 		if(!actor_)
-			actor_ = system().spawn_in_group<objbase_actor>(home(), shared_from_this());
+			actor_ = system().spawn_in_group<objbase_actor>(
+				// YES, const_cast here, sorry
+				home(), const_cast<objbase&>(*this).shared_from_this()
+			);
 	});
 	return actor_;
 }
@@ -247,17 +250,17 @@ auto objbase::home_id() const -> std::string {
 	return to_string(hid_);
 }
 
-auto objbase::apply(obj_transaction tr) -> tr_result {
+auto objbase::apply(obj_transaction tr) const -> tr_result {
 	return actorf<tr_result>(
 		actor(), kernel::radio::timeout(true), a_apply(), std::move(tr)
 	);
 }
 
-auto objbase::apply(launch_async_t, obj_transaction tr) -> void {
+auto objbase::apply(launch_async_t, obj_transaction tr) const -> void {
 	caf::anon_send(actor(), a_apply(), std::move(tr));
 }
 
-auto objbase::apply(obj_transaction tr, process_tr_cb f) -> void {
+auto objbase::apply(obj_transaction tr, process_tr_cb f) const -> void {
 	anon_request(
 		actor(), kernel::radio::timeout(true), false,
 		[f = std::move(f)](tr_result::box tres) { f(std::move(tres)); },
@@ -265,7 +268,7 @@ auto objbase::apply(obj_transaction tr, process_tr_cb f) -> void {
 	);
 }
 
-auto objbase::touch(tr_result tres) -> void {
+auto objbase::touch(tr_result tres) const -> void {
 	caf::anon_send(actor(), a_apply(), obj_transaction{
 		[tres = std::move(tres)]() mutable { return std::move(tres); }
 	});

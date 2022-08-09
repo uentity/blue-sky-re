@@ -72,7 +72,7 @@ public:
 	}
 
 	/// return objects's typed actor handle
-	auto actor() {
+	auto actor() const {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
 
@@ -100,14 +100,14 @@ public:
 	virtual auto home_id() const -> std::string final;
 
 	/// runs modificator in message queue of this object
-	virtual auto apply(obj_transaction tr) -> tr_result final;
-	virtual auto apply(launch_async_t, obj_transaction tr) -> void final;
+	virtual auto apply(obj_transaction tr) const -> tr_result final;
+	virtual auto apply(launch_async_t, obj_transaction tr) const -> void final;
 	/// run transaction and then inkvoke callback with tr tr_result
 	using process_tr_cb = tree::link::process_tr_cb;
-	auto apply(obj_transaction tr, process_tr_cb f) -> void;
+	auto apply(obj_transaction tr, process_tr_cb f) const -> void;
 
 	/// sends empty transaction to trigger `data modified` signal
-	virtual auto touch(tr_result tres = {}) -> void final;
+	virtual auto touch(tr_result tres = {}) const -> void final;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Events subscription management
@@ -142,7 +142,7 @@ protected:
 	std::string id_;
 
 	/// return object's raw (dynamic-typed) actor handle
-	auto raw_actor() -> const caf::actor&;
+	auto raw_actor() const -> const caf::actor&;
 
 private:
 	friend class ::cereal::access;
@@ -152,10 +152,10 @@ private:
 	/// pointer to associated inode
 	std::weak_ptr<tree::inode> inode_;
 	/// object's internal actor
-	caf::actor actor_;
+	mutable caf::actor actor_;
 	/// internal home group ID = object *unique* ID
 	uuid hid_;
-	std::once_flag einit_flag_;
+	mutable std::once_flag einit_flag_;
 };
 // alias
 using sp_obj  = std::shared_ptr<objbase>;
