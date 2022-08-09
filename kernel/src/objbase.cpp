@@ -90,6 +90,8 @@ auto objbase::data_node() const -> tree::node {
 	return tree::node::nil();
 }
 
+auto objbase::empty_payload() const -> bool { return false; }
+
 /*-----------------------------------------------------------------------------
  *  objnode
  *-----------------------------------------------------------------------------*/

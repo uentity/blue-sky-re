@@ -80,6 +80,8 @@ void py_bind_objbase(py::module& m) {
 		.def("unsubscribe", [](const py::object&, std::uint64_t handler_id) {
 			objbase::unsubscribe(handler_id);
 		}, "handler_id"_a)
+
+		.def("empty_payload", &objbase::empty_payload)
 	;
 
 	// objnode

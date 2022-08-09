@@ -134,6 +134,10 @@ public:
 	/// node service - default impl returns nil node
 	virtual auto data_node() const -> tree::node;
 
+	/// Check whether object has persistent payload that can't be restored by default ctor
+	/// Defalt impl in objbase returns `false`
+	virtual auto empty_payload() const -> bool;
+
 protected:
 	std::string id_;
 
