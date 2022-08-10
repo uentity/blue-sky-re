@@ -43,7 +43,6 @@ public:
 	auto end_node(const tree::node& N) -> error;
 
 	auto load_object(objbase& obj, bool has_node) -> error;
-	auto wait_objects_loaded(timespan how_long = infinite) const -> std::vector<error>;
 
 	auto loadBinaryValue(void* data, size_t size, const char* name = nullptr) -> void;
 

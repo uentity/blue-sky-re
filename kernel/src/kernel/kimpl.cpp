@@ -21,6 +21,8 @@
 #include <bs/serialize/tree.h>
 #include "../serialize/tree_impl.h"
 
+#include <cereal/types/utility.hpp>
+
 #include <caf/init_global_meta_objects.hpp>
 #include <caf/io/middleman.hpp>
 

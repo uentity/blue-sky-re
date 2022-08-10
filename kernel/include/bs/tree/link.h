@@ -35,7 +35,7 @@ public:
 	using actor_type = caf::typed_actor<
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
-		// get pointee node group ID
+		// get home group ID as string, empty if home group is missing
 		caf::replies_to<a_home_id>::with<std::string>,
 		// get link ID
 		caf::replies_to<a_lnk_id>::with<lid_type>,

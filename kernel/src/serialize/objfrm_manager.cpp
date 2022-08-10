@@ -26,8 +26,8 @@ objfrm_manager::objfrm_manager(caf::actor_config& cfg, bool is_saving) :
 {}
 
 auto objfrm_manager::session_ack() -> void {
-	if(session_finished_ && (nstarted_ == nfinished_) && boxed_errs_.pending()) {
-		boxed_errs_.deliver(er_stack_);
+	if(session_finished_ && (nstarted_ == nfinished_) && res_.pending()) {
+		res_.deliver(objfrm_result_t{std::move(er_stack_), std::move(empty_payload_)});
 		nstarted_ = nfinished_ = 0;
 		session_finished_ = false;
 	}
@@ -55,10 +55,16 @@ return {
 			request(objA, caf::infinite, a_load(), std::move(fmt_name), std::move(fname))
 		;
 		// process result
-		frm_job.then([=](error::box er) {
+		frm_job.then([=, obj_hid = to_uuid(obj->home_id())](error::box er) {
 			// save result of finished job & inc finished counter
 			++nfinished_;
-			if(er.ec) er_stack_.push_back(std::move(er));
+			// check if obj had empty payload
+			static const auto empty_data_ec = make_error_code(Error::EmptyData);
+			if(er.ec == empty_data_ec.value() && er.domain == empty_data_ec.category().name())
+				obj_hid.map([&](auto& obj_uid) { empty_payload_.emplace_back(obj_uid); });
+			// otherwise collect store error if eny
+			else if(er.ec)
+				er_stack_.push_back(std::move(er));
 			session_ack();
 		}, [=](const caf::error& er) {
 			// in case smth went wrong with job posting
@@ -70,29 +76,32 @@ return {
 		});
 	},
 
-	[=](a_ack) -> caf::result<errb_vector> {
-		boxed_errs_ = make_response_promise();
+	[=](a_ack) -> caf::result<objfrm_result_t> {
+		res_ = make_response_promise<objfrm_result_t>();
 		session_ack();
-		return boxed_errs_;
+		return res_;
 	}
 }; }
 
-auto objfrm_manager::wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error> {
+auto objfrm_manager::wait_jobs_done(objfrm_manager_t self, timespan how_long)
+-> std::pair<std::vector<error>, std::vector<uuid>> {
 	auto fmanager = caf::make_function_view(
 		self, how_long == infinite ? caf::infinite : how_long
 	);
 
-	auto res = std::vector<error>{};
-	auto boxed_res = actorf<errb_vector>(fmanager, a_ack());
-	if(boxed_res) {
-		auto& boxed_errs = *boxed_res;
-		res.reserve(boxed_errs.size());
+	auto res_errors = std::vector<error>{};
+	auto res = actorf<objfrm_result_t>(fmanager, a_ack());
+	if(res) {
+		auto& [boxed_errs, empty_payload] = *res;
+		res_errors.reserve(boxed_errs.size());
 		for(auto& er_box : boxed_errs)
-			res.push_back( error::unpack(std::move(er_box)) );
+			res_errors.push_back( error::unpack(std::move(er_box)) );
+		return { std::move(res_errors), std::move(empty_payload) };
 	}
-	else
-		res.push_back(std::move(boxed_res.error()));
-	return res;
+	else {
+		res_errors.push_back(std::move(res.error()));
+		return { std::move(res_errors), {} };
+	}
 }
 
 NAMESPACE_END(blue_sky::detail)

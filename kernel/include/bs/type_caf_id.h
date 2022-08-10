@@ -26,5 +26,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(bs, blue_sky::detail::bs_cid_begin)
 	CAF_ADD_TYPE_ID(bs, (blue_sky::sp_cobjnode))
 
 	CAF_ADD_TYPE_ID(bs, (blue_sky::uuid))
+	CAF_ADD_TYPE_ID(bs, (std::pair<std::vector<blue_sky::error::box>, std::vector<blue_sky::uuid>>))
 
 CAF_END_TYPE_ID_BLOCK(bs)

@@ -60,8 +60,6 @@ auto load_fs(link& root, const std::string& filename) -> error {
 	if(auto er = error::eval_safe([&] {
 		auto ar = tree_fs_input(filename, tree_fs_input::default_opts);
 		ar(root);
-		//ar.serializeDeferments();
-		errs = ar.wait_objects_loaded(infinite);
 	}))
 		errs.push_back(er);
 

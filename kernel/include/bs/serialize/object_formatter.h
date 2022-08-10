@@ -35,6 +35,7 @@ struct BS_API object_formatter : private std::pair<object_saver_fn, object_loade
 		std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node = false
 	);
 
+	// returned `tree::Error::EmptyData` denotes that object had empty payload and saving was skipped
 	auto save(const objbase& obj, std::string obj_fname) noexcept -> error;
 	auto load(objbase& obj, std::string obj_fname) noexcept -> error;
 

@@ -18,16 +18,16 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/boost_uuid.h>
 
 #include <cereal/types/vector.hpp>
+#include <cereal/archives/portable_binary.hpp>
+
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
-
-using detail::objects_dirname;
-using detail::links_dirname;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_output::impl
@@ -146,7 +146,15 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
 		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
 		has_wait_deferred_ = false;
-		return res;
+
+		// store empty payload in separate file in objects dir
+		if(auto er = error::eval_safe([&] {
+			auto empty_payload_f = neck_t{objects_path_ / empty_payload_fname, neck_mode | std::ios::binary};
+			auto ar = cereal::PortableBinaryOutputArchive{empty_payload_f};
+			ar(res.second);
+		}))
+			res.first.push_back(er);
+		return std::move(res.first);
 	}
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {

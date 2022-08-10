@@ -283,7 +283,7 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 			if(!obj) return false;
 			auto res = make_response_promise<bool>();
 			request(objbase_actor::actor(*obj), kernel::radio::timeout(), a_lazy{}, a_load{}, a_data_node{})
-			.then(
+			.await(
 				[=, orig_me = std::move(orig_me), load_then_answer = std::move(load_then_answer)]
 				(bool with_node) mutable {
 					// then install new

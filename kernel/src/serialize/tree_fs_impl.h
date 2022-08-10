@@ -16,6 +16,7 @@
 #include "../tree/link_impl.h"
 
 #include <caf/typed_event_based_actor.hpp>
+#include <caf/typed_response_promise.hpp>
 
 #include <cereal/archives/json.hpp>
 
@@ -25,48 +26,7 @@
 #include <unordered_set>
 
 
-NAMESPACE_BEGIN(blue_sky::detail)
-namespace fs = std::filesystem;
-
-/*-----------------------------------------------------------------------------
- *  handle objects save/load jobs
- *-----------------------------------------------------------------------------*/
-using objfrm_manager_t = caf::typed_actor<
-	// launch object formatting job
-	caf::reacts_to<
-		sp_obj /*what*/, std::string /*formatter name*/, std::string /*filename*/
-	>,
-	// end formatting session
-	caf::reacts_to<a_bye>,
-	// return collected job errors
-	caf::replies_to< a_ack >::with< std::vector<error::box> >
->;
-
-// [NOTE] manager is valid only for one save/load session!
-// on next session just spawn new manager
-struct BS_HIDDEN_API objfrm_manager : objfrm_manager_t::base {
-	using actor_type = objfrm_manager_t;
-
-	objfrm_manager(caf::actor_config& cfg, bool is_saving);
-
-	auto make_behavior() -> behavior_type override;
-
-	static auto wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error>;
-
-private:
-	// deliver session results back to requester
-	auto session_ack() -> void;
-
-	const bool is_saving_;
-	bool session_finished_ = false;
-
-	// errors collection
-	std::vector<error::box> er_stack_;
-	caf::response_promise boxed_errs_;
-	// track running savers
-	size_t nstarted_ = 0, nfinished_ = 0;
-};
-
+NAMESPACE_BEGIN(blue_sky)
 
 /// current version of TreeFS archive format
 inline constexpr std::uint32_t tree_fs_version = 0;
@@ -78,18 +38,66 @@ inline constexpr auto link_file_ext = ".bsl";
 inline constexpr auto objects_dirname = ".objects";
 inline constexpr auto links_dirname = ".links";
 
+/// name of file with empty payload objects IDs
+inline constexpr auto empty_payload_fname = "empty_payload.bin";
+
+NAMESPACE_END(blue_sky);
+
+
+NAMESPACE_BEGIN(blue_sky::detail)
+namespace fs = std::filesystem;
+
+/*-----------------------------------------------------------------------------
+ *  handle objects save/load jobs
+ *-----------------------------------------------------------------------------*/
+using objfrm_result_t = std::pair<std::vector<error::box>, std::vector<uuid>>;
+
+using objfrm_manager_t = caf::typed_actor<
+	// launch object formatting job
+	caf::reacts_to<
+		sp_obj /*what*/, std::string /*formatter name*/, std::string /*filename*/
+	>,
+	// end formatting session
+	caf::reacts_to<a_bye>,
+	// return collected job errors + objects with empty payload
+	caf::replies_to< a_ack >::with< objfrm_result_t >
+>;
+
+// [NOTE] manager is valid only for one save/load session!
+// on next session just spawn new manager
+struct BS_HIDDEN_API objfrm_manager : objfrm_manager_t::base {
+	using actor_type = objfrm_manager_t;
+
+	objfrm_manager(caf::actor_config& cfg, bool is_saving);
+
+	auto make_behavior() -> behavior_type override;
+
+	// returns collected errors + objects with empty payload
+	static auto wait_jobs_done(objfrm_manager_t self, timespan how_long)
+	-> std::pair<std::vector<error>, std::vector<uuid>>;
+
+private:
+	// deliver session results back to requester
+	auto session_ack() -> void;
+
+	const bool is_saving_;
+	bool session_finished_ = false;
+
+	// errors collection
+	std::vector<error::box> er_stack_;
+	caf::typed_response_promise<objfrm_result_t> res_;
+	// track running savers
+	size_t nstarted_ = 0, nfinished_ = 0;
+	// collect objects with empty payload
+	std::vector<uuid> empty_payload_;
+};
+
 /*-----------------------------------------------------------------------------
  *  Manage link file streams and dirs during tree save/load
  *-----------------------------------------------------------------------------*/
 template<bool Saving>
 struct file_heads_manager {
 	using Error = tree::Error;
-
-	/// current version of TreeFS archive format
-	static constexpr std::uint32_t tree_fs_version = 0;
-
-	// extension of link files
-	static constexpr auto link_file_ext = ".bsl";
 
 	// setup traits depending on save/load mode
 	template<bool Saving_, typename = void>

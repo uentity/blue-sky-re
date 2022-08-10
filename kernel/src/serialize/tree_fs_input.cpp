@@ -18,8 +18,11 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/boost_uuid.h>
 
 #include <cereal/types/vector.hpp>
+#include <cereal/archives/portable_binary.hpp>
+
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -35,6 +38,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	using heads_mgr_t = detail::file_heads_manager<false>;
 	using fmanager_t = detail::objfrm_manager;
 	using Error = tree::Error;
+
+	std::optional<std::vector<uuid>> empty_payload_ = std::nullopt;
 
 	impl(std::string root_fname, TFSOpts opts) :
 		heads_mgr_t{opts, std::move(root_fname)}
@@ -132,6 +137,22 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		// [TODO] resolve this via formatter
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
+		// 4. if object carry no valuable payload then we also can skip reading data
+		if(!empty_payload_) {
+			// read UUIDs of objects with empty payload
+			empty_payload_.emplace();
+			error::eval_safe_quiet([&] {
+				auto empty_payload_f = neck_t{objects_path_ / empty_payload_fname, neck_mode | std::ios::binary};
+				auto ar = cereal::PortableBinaryInputArchive{empty_payload_f};
+				ar(*empty_payload_);
+			});
+		}
+		bool obj_empty = false;
+		to_uuid(obj.home_id()).map([&](const auto& obj_hid) {
+			obj_empty = std::find(empty_payload_->begin(), empty_payload_->end(), obj_hid) != empty_payload_->end();
+		});
+		if(obj_empty) return perfect;
+
 		// 4. format absolute object data file path
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
@@ -150,25 +171,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		); !r)
 			return r.error();
 
-		//caf::anon_send(
-		//	manager_, obj.shared_from_this(), obj_frm, abs_obj_path.string()
-		//);
-		//// defer wait until save completes
-		//if(!has_wait_deferred_) {
-		//	ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_loaded(); } }));
-		//	has_wait_deferred_ = true;
-		//}
 		return perfect;
 	}); }
-
-	auto wait_objects_loaded(timespan how_long) -> std::vector<error> {
-		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
-		has_wait_deferred_ = false;
-		return res;
-	}
-
-	// async loaders manager
-	bool has_wait_deferred_ = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,10 +202,6 @@ auto tree_fs_input::end_node(const tree::node& N) -> error {
 
 auto tree_fs_input::load_object(objbase& obj, bool has_node) -> error {
 	return pimpl_->load_object(*this, obj, has_node);
-}
-
-auto tree_fs_input::wait_objects_loaded(timespan how_long) const -> std::vector<error> {
-	return pimpl_->wait_objects_loaded(how_long);
 }
 
 auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -> void {
