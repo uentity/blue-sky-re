@@ -47,7 +47,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 	auto begin_node(tree_fs_input& ar) -> error {
 		// sentinel is ONLY used for template matching
-		static const auto sentinel = std::optional<tree::node>{std::nullopt};
+		// [NOTE] making it static cause MSVC internal compiler error
+		const auto sentinel = std::optional<tree::node>{std::nullopt};
 		return error::eval_safe(
 			[&] { return head().map([&](auto* ar) { prologue(*ar, *sentinel); }); }
 		);
