@@ -202,7 +202,7 @@ auto operator<(std::string_view lhs, const object_formatter& rhs) {
 
 auto object_formatter::save(const objbase& obj, std::string obj_fname) noexcept -> error {
 	// if obj has empty payload, skip save
-	if(obj.empty_payload()) return tree::Error::EmptyData;
+	if(obj.empty_payload()) return error::quiet(tree::Error::EmptyData);
 
 	const auto finally = scope_guard{[&] { error::eval_safe([&] { FM.deregister_formatter(obj); }); }};
 	return error::eval_safe([&] {
