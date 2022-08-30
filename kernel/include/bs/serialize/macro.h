@@ -349,11 +349,11 @@ namespace cereal { namespace detail {                     \
     void BS_API_PLUGIN dynamic_init_dummy_##unit_id();    \
 } } /* end cereal */                                      \
 namespace {                                               \
-struct dynamic_init_##unit_id {                           \
+[[maybe_unused]] inline struct dynamic_init_##unit_id {   \
     dynamic_init_##unit_id() {                            \
         ::cereal::detail::dynamic_init_dummy_##unit_id(); \
     }                                                     \
-} dynamic_init_instance_##unit_id;                        \
+} const dynamic_init_instance_##unit_id;                  \
 } /* end anonymous namespace */
 
 // this macro should go to translation unit with polymorphic types
