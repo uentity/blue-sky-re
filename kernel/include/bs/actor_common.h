@@ -280,7 +280,7 @@ auto anon_request_result(Actor A, timespan timeout, bool high_priority, F f, Arg
 	] (caf::stateful_actor<rstate>* self) mutable {
 		// send `a_ack` request to obtain callback invocation result
 		self->become(
-			[=](a_ack) { return *self->state.res; }
+			[=](a_ack) { return *self->state.res; self->quit(); }
 		);
 		// make request
 		std::apply([self, high_priority, t, A = std::move(A)](auto&&... args) {
