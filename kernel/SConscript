@@ -53,7 +53,6 @@ kernel_cpp_list = [
 	"src/kernel/plugins.cpp",
 	"src/kernel/types_factory.cpp",
 
-	"src/compat/messaging.cpp",
 	"src/compat/array.cpp",
 	"src/compat/array_serialize.cpp",
 
@@ -108,7 +107,6 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in [
 	"py_array.cpp",
 	"py_main.cpp",
 	"py_misc.cpp",
-	"py_messaging.cpp",
 	"py_objbase.cpp",
 	"py_kernel.cpp",
 	"py_link.cpp",
